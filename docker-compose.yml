@@ -1,0 +1,27 @@
+services:
+  parabl_foreshadow_api:
+    build: .
+    networks:
+      - webserver
+    restart: always
+    expose:
+      - 1612
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      - DB_HOST=host.docker.internal
+      - DB_USER=postgres
+      - DB_PASSWORD=Ea+rrB3vAyJptWEw+DIsYXW3T7EPxHri
+      - DB_DATABASE=foreshadow
+      - FORESHADOW_API_URL=http://host.docker.internal:5001
+      - REDIS_CONFIG_URL=redis://host.docker.internal:6379
+      - AWS_ACCESS_KEY_ID=AKIAVZBI32PTYZAJ2P4J
+      - AWS_SECRET_ACCESS_KEY=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
+    logging:
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+networks:
+  webserver:
+    external: true
