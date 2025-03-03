@@ -1,10 +1,7 @@
-export default {
-  displayName: 'parabl-foreshadow',
-  preset: '../../../jest.preset.js',
-  testEnvironment: 'node',
+/** @type {import('ts-jest').JestConfigWithTsJest} **/
+module.exports = {
+  testEnvironment: "node",
   transform: {
-    '^.+\\.[tj]s$': ['ts-jest', { tsconfig: '<rootDir>/tsconfig.spec.json' }],
+    "^.+.tsx?$": ["ts-jest", {}],
   },
-  moduleFileExtensions: ['ts', 'js', 'html'],
-  coverageDirectory: '../../../coverage/apps/services/parabl-foreshadow',
 };

@@ -1,4 +1,4 @@
-import { RiskIndicator, TokenLocation } from '../models';
+import { RiskIndicator, TokenLocation } from "../models";
 
 export type ParameterMetaData = {
   dataDate: number;
@@ -71,6 +71,7 @@ export type WeatherRequest = {
   level?: number;
   total_days?: number;
   step_hours?: number;
+  start_hour_offset?: number;
 };
 
 export interface ForecastedWeatherValues {

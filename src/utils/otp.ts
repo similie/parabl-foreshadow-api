@@ -136,7 +136,6 @@ export const createOTP = async (values: Partial<OTP>) => {
   const queryAgent = new QueryAgent<OTP>(OTP, {});
   const created = await queryAgent.create(values);
   const createdOtp = Array.isArray(created) ? created[0] : created;
-  console.log("CRWATED THIS ", createdOtp);
   if (!createdOtp) {
     throw new Error("Failed to create the OTP");
   }

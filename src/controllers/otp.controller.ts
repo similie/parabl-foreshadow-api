@@ -105,7 +105,6 @@ export default class OTPController extends EllipsiesController<OTP> {
         body.identifier,
       );
       const verifications = (await queryAgent.getObjects()) as OTP[];
-      console.log("FOUND THIS", verifications);
       let valid = false;
       for (const verify of verifications) {
         if (!verify || !verify.otp) {
