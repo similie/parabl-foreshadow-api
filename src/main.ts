@@ -13,8 +13,8 @@ import { seedContent } from "./seeds";
 import {
   FORECAST_QUEUE_JOB,
   foreCastQueue,
-  // testPushNotificationsQueue,
-  // PUSH_NOTIFICATION_TEST,
+  prewarmCachingQueue,
+  CACHING_PREWARMING_JOB,
 } from "./jobs";
 import { PointApi } from "./weather";
 import { UserRequired } from "./middleware";
@@ -42,7 +42,7 @@ const ds = () => {
 const setRoutes = (ellipsies: Ellipsies) => {
   ellipsies.server.app.get(
     tileMappingRoute(COMMON_API_SERVICE_ROUTES),
-    [UserRequired],
+    // [UserRequired], // need to fix this
     PointApi.proxTileServer,
   );
 };
@@ -55,15 +55,15 @@ const pruneJobs = async () => {
 };
 
 const runNotificationTest = async () => {
-  // const repeatableJobs = await testPushNotificationsQueue.getJobSchedulers();
-  // for (const job of repeatableJobs) {
-  //   await testPushNotificationsQueue.removeJobScheduler(job.key);
-  // }
-  // await testPushNotificationsQueue.add(
-  //   PUSH_NOTIFICATION_TEST,
-  //   {},
-  //   { repeat: { pattern: '0 */1 * * * *' } }
-  // );
+  const repeatableJobs = await prewarmCachingQueue.getJobSchedulers();
+  for (const job of repeatableJobs) {
+    await prewarmCachingQueue.removeJobScheduler(job.key);
+  }
+  await prewarmCachingQueue.add(
+    CACHING_PREWARMING_JOB,
+    {},
+    { repeat: { pattern: "0 */20 * * * *" } },
+  );
 };
 
 const run = async () => {

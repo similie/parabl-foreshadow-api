@@ -71,7 +71,6 @@ export default class ApplicationUserController extends EllipsiesController<Appli
     if (!otp.identifier) {
       throw new BadRequestError("User cannot be authenticated");
     }
-    console.log("my otp", otp);
     return createOTP(otp);
   }
 

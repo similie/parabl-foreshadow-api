@@ -228,10 +228,15 @@ export class PointApi {
     coords: LocationCoordinates,
     days: number = PointApi.DAYS_TO_READ,
     hours: number = PointApi.STEP_HOURS,
+    startTime: number = 0,
   ): Promise<ForecastResponseDetails[]> {
     const request = getWeatherRequestTemplate(coords);
     request.total_days = days;
     request.step_hours = hours;
+    if (startTime) {
+      request.start_hour_offset = startTime;
+    }
+
     const response = await fetch(process.env.FORESHADOW_API_URL + "/forecast", {
       method: "POST",
       body: JSON.stringify(request),
@@ -240,49 +245,6 @@ export class PointApi {
     const responseValues = (await response.json()) as ForecastResponseDetails[];
     return responseValues;
   }
-
-  // public static proxTileServer(
-  //   req: ExpressRequest,
-  //   res: ExpressResponse
-  // ): Promise<void> {
-  //   return new Promise<void>((resolve, reject) => {
-  //     const joinedPath = req.path.split('/');
-  //     const index = joinedPath.indexOf('tiles');
-  //     const append = joinedPath.splice(index).join('/');
-  //     const targetHost = process.env.FORESHADOW_API_URL + `/${append}`;
-  //     const targetUrl = new URL(targetHost);
-  //     // Assuming req.query is a plain object, URLSearchParams will serialize it.
-  //     targetUrl.search = new URLSearchParams(req.query as any).toString();
-  //     targetUrl.searchParams.delete('authorization');
-  //     console.log('I AM GETTING THIS TO THE SERVER', targetUrl.toString());
-  //     // Choose the correct module based on the protocol.
-  //     const lib = targetUrl.protocol === 'https:' ? https : http;
-  //     // Make the request to the target URL.
-  //     lib
-  //       .get(targetUrl.toString(), (proxyRes) => {
-  //         // Set response headers and status from the proxied response.
-  //         res.writeHead(proxyRes.statusCode || 200, proxyRes.headers);
-  //         // Pipe the response data back to the original response.
-  //         proxyRes.pipe(res);
-
-  //         proxyRes.on('end', () => {
-  //           resolve();
-  //         });
-
-  //         // In case of an error in the proxy response stream, reject the promise.
-  //         proxyRes.on('error', (err) => {
-  //           reject(err);
-  //         });
-  //       })
-  //       .on('error', (err: Error) => {
-  //         console.error('Proxy error:', err);
-  //         if (!res.headersSent) {
-  //           res.status(500).send('Error connecting to target host');
-  //         }
-  //         reject(err);
-  //       });
-  //   }).catch(console.error);
-  // }
 
   public static proxTileServer(
     req: ExpressRequest,
@@ -329,8 +291,12 @@ export class PointApi {
 
   public async rawPointWeather(
     coords: LocationCoordinates,
+    startTime: number = 0,
   ): Promise<PointForecastValue[]> {
     const request = getWeatherRequestTemplate(coords);
+    if (startTime) {
+      request.start_hour_offset = startTime;
+    }
     const response = await fetch(process.env.FORESHADOW_API_URL + "/point", {
       method: "POST",
       body: JSON.stringify(request),
@@ -369,5 +335,27 @@ export class PointApi {
       console.error("WEATHER API ERROR", e);
       throw new Error(e.message);
     }
+  }
+
+  async prewarmForecast() {
+    const point = this.getRandomGeoPoint();
+    await this.rawPointWeather(point, 1);
+  }
+
+  async prewarmPointForecast() {
+    const point = this.getRandomGeoPoint();
+    await this.rawPointForecast(
+      point,
+      PointApi.DAYS_TO_READ,
+      PointApi.STEP_HOURS,
+      1,
+    );
+  }
+
+  getRandomGeoPoint(): { latitude: number; longitude: number } {
+    const latitude = (Math.random() * 180 - 90).toFixed(6); // Random latitude between -90 and 90
+    const longitude = (Math.random() * 360 - 180).toFixed(6); // Random longitude between -180 and 180
+
+    return { latitude: parseFloat(latitude), longitude: parseFloat(longitude) };
   }
 }

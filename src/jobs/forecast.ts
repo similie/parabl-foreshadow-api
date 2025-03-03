@@ -13,7 +13,7 @@ import { ForecastWarning } from "../types";
 import { sendPushNotification } from "../utils";
 export const FORECAST_QUEUE_NAME = "forecastProcess";
 export const FORECAST_QUEUE_JOB = "forecastProcessJob";
-export const PUSH_NOTIFICATION_TEST = "pushNotificationsJob";
+export const CACHING_PREWARMING_JOB = "pushNotificationsJob";
 export const foreCastQueue = new Queue(FORECAST_QUEUE_NAME, {
   connection: { url: getRedisConfig().url },
 });
@@ -175,15 +175,23 @@ export const foreCastWorker = new Worker(
     },
   },
 );
-export const testPushNotificationsQueue = new Queue(PUSH_NOTIFICATION_TEST, {
+export const prewarmCachingQueue = new Queue(CACHING_PREWARMING_JOB, {
   connection: { url: getRedisConfig().url },
 });
-export const testPushNotifications = new Worker(
-  PUSH_NOTIFICATION_TEST,
+export const prewarmCaching = new Worker(
+  CACHING_PREWARMING_JOB,
   async () => {
-    console.log("BALLS");
-    const token = "ExponentPushToken[y-mt_cBKoJp_6o0LqRMZKe]";
-    sendPushNotification(token, "BOOMO!", "THIS IS GAZZOOMO AS");
+    const api = new PointApi();
+    try {
+      await api.prewarmForecast();
+    } catch {
+      //
+    }
+    try {
+      await api.prewarmPointForecast();
+    } catch {
+      //
+    }
   },
   {
     connection: {

@@ -1,6 +1,6 @@
-import nodemailer from 'nodemailer';
-import * as aws from '@aws-sdk/client-ses';
-import { defaultProvider } from '@aws-sdk/credential-provider-node';
+import nodemailer from "nodemailer";
+import * as aws from "@aws-sdk/client-ses";
+import { defaultProvider } from "@aws-sdk/credential-provider-node";
 export class EmailTransport {
   private static _instance: EmailTransport | null = null;
   private _transporter: nodemailer.Transporter;
@@ -9,8 +9,8 @@ export class EmailTransport {
   private constructor() {
     // Configure SESClient
     const sesConfig: aws.SESClientConfig = {
-      apiVersion: '2010-12-01',
-      region: 'us-east-1',
+      apiVersion: "2010-12-01",
+      region: "us-east-1",
       credentials: defaultProvider(),
       // Credentials will be resolved from the default credential provider chain
     };
