@@ -40,6 +40,7 @@ export default class UserTokenController extends EllipsiesController<UserTokens>
   }
 
   private destroyExistingOnUser(userUid: UUID) {
+    console.log("WHAT THE HE", userUid);
     const agentUserDest = new QueryAgent<UserTokens>(UserTokens, {
       where: { user: userUid as unknown as ApplicationUser },
     });
@@ -76,8 +77,10 @@ export default class UserTokenController extends EllipsiesController<UserTokens>
         };
         if (body.user) {
           store.user = body.user as unknown as UUID;
+
           await this.destroyExistingOnUser(body.user as unknown as UUID);
         }
+        console.log("GOING TO STORE THIS HERE", store);
         token = (await agentUser.create(store as any)) as UserTokens;
       } else if (token && body.user) {
         // await this.destroyExistingTokens(body.user as unknown as UUID);
