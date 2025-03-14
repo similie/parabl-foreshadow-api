@@ -72,24 +72,27 @@ export default class TokenController extends EllipsiesController<TokenLocation> 
     @Req() req: ExpressRequest,
   ): Promise<TokenLocation[]> {
     const token: string | undefined = req.query.token as string | undefined;
-
+    console.log("I AM THIS TOKEN AND I DESERVER MORE", token);
     if (!token) {
       return [];
     }
     try {
       const agentToken = new QueryAgent<UserTokens>(UserTokens, {});
       const found = await agentToken.findOneBy({ token });
+      console.log("WHAT AND I FOUND", found);
       if (!found || !found.user) {
         return [];
       }
 
       const user = typeof found.user === "string" ? found.user : found.user.id;
+      console.log("I AM THE USER", user);
       const queryAgent = new QueryAgent<TokenLocation>(TokenLocation, {
         populate: ["*"],
         sort: { createdAt: "desc" },
         where: { user },
       });
       const values = (await queryAgent.getObjects()) as TokenLocation[];
+      console.log("FOUND THESE VALUES", values);
       return this.findAlerts(values) as unknown as TokenLocation[];
     } catch (e) {
       console.error("ERROR", e);
