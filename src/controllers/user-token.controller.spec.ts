@@ -100,6 +100,25 @@ describe("UserTokenControllerTest", () => {
     expect(results.user).not.toBeFalsy();
   });
 
+  it("should should pull our user now", async () => {
+    artifacts.token2 = generateUniqueId();
+    const response = await fetch(`${baseURL}user-tokens/search`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json", // Add this header
+      },
+      body: JSON.stringify({
+        token: artifacts.token2,
+        user: artifacts.testUser.id,
+      }),
+    });
+    const results = await response.json();
+    expect(results.id).toBeDefined();
+    // // this is not going to be the case for when we are in production
+    expect(results.token).toBe(artifacts.token2);
+    expect(results.user).not.toBeFalsy();
+  });
+
   afterAll(async () => {
     // await ellipsies.pgManager.datasource.dropDatabase();
     await ellipsies.shutdown();
