@@ -46,12 +46,12 @@ export default class UserTokenController extends EllipsiesController<UserTokens>
     return agentUserDest.destroyAll();
   }
 
-  private destroyExistingOnTokens(token: string) {
-    const agentUserDest = new QueryAgent<UserTokens>(UserTokens, {
-      where: { token: token },
-    });
-    return agentUserDest.destroyAll();
-  }
+  // private destroyExistingOnTokens(token: string) {
+  //   const agentUserDest = new QueryAgent<UserTokens>(UserTokens, {
+  //     where: { token: token },
+  //   });
+  //   return agentUserDest.destroyAll();
+  // }
 
   /**
    * @description Override defaults to validate query and get objects
@@ -83,12 +83,12 @@ export default class UserTokenController extends EllipsiesController<UserTokens>
         if (!user) {
           return token;
         }
-        await this.destroyExistingOnTokens(token.token);
-        const store = {
-          token: body.token,
-          user: user.id as unknown as UUID,
-        };
-        await agentUser.create(store as any);
+        const agentUserUpdate = new QueryAgent<UserTokens>(UserTokens, {
+          where: { id: token.id },
+        });
+        await agentUserUpdate.updateByQuery({
+          user: user.id as unknown as ApplicationUser,
+        });
         token = await agentUser.findOneBy({ token: body.token });
       }
       return token;
