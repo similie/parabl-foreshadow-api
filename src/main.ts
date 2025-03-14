@@ -64,7 +64,7 @@ const runNotificationTest = async () => {
   await prewarmCachingQueue.add(
     CACHING_PREWARMING_JOB,
     {},
-    { repeat: { pattern: "0 */10 * * * *" } },
+    { repeat: { pattern: "0 */20 * * * *" } },
   );
 };
 
