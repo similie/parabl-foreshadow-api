@@ -287,7 +287,6 @@ export class PointApi {
     });
 
     const responseValues = (await response.json()) as ForecastResponseDetails[];
-    console.log("GOT THIS FORECAST", responseValues);
     return responseValues;
   }
 
@@ -305,7 +304,6 @@ export class PointApi {
       headers: { "Content-Type": "application/json" },
     });
     const values = (await response.json()) as PointForecastValue[];
-    console.log("GOT THIS RESPONSE", values);
     return values;
   }
 
@@ -342,7 +340,6 @@ export class PointApi {
 
   async prewarmForecast() {
     const point = this.getRandomGeoPoint();
-    console.log("GETTING THIS POINT", point);
     for (let i = 0; i < PointApi.STEP_HOURS; i++) {
       try {
         await this.rawPointWeather(point, i + 1);
