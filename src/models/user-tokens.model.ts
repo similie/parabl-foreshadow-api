@@ -3,7 +3,7 @@ import {
   Entity,
   Index,
   Column,
-  OneToOne,
+  ManyToOne,
   JoinColumn,
 } from "@similie/ellipsies";
 import ApplicationUser from "./application-user.model";
@@ -14,7 +14,7 @@ export default class UserTokens extends EllipsiesBaseModelUUID {
   public token: string;
   @Column("varchar", { name: "socket", nullable: true })
   public socket?: string;
-  @OneToOne(() => ApplicationUser, { nullable: true })
+  @ManyToOne(() => ApplicationUser, { nullable: true })
   @JoinColumn({ name: "user" })
   public user?: ApplicationUser;
 }
