@@ -39,9 +39,16 @@ export default class UserTokenController extends EllipsiesController<UserTokens>
     return super.find(req);
   }
 
-  private destroyExistingTokens(userUid: UUID) {
+  private destroyExistingOnUser(userUid: UUID) {
     const agentUserDest = new QueryAgent<UserTokens>(UserTokens, {
       where: { user: userUid as unknown as ApplicationUser },
+    });
+    return agentUserDest.destroyAll();
+  }
+
+  private destroyExistingOnTokens(token: string) {
+    const agentUserDest = new QueryAgent<UserTokens>(UserTokens, {
+      where: { token: token },
     });
     return agentUserDest.destroyAll();
   }
@@ -67,7 +74,7 @@ export default class UserTokenController extends EllipsiesController<UserTokens>
         };
         if (body.user) {
           store.user = body.user as unknown as UUID;
-          await this.destroyExistingTokens(body.user as unknown as UUID);
+          await this.destroyExistingOnUser(body.user as unknown as UUID);
         }
         token = (await agentUser.create(store as any)) as UserTokens;
       } else if (token && body.user) {
@@ -76,12 +83,12 @@ export default class UserTokenController extends EllipsiesController<UserTokens>
         if (!user) {
           return token;
         }
-        const agentUserUpdate = new QueryAgent<UserTokens>(UserTokens, {
-          where: { id: token.id },
-        });
-        await agentUserUpdate.updateByQuery({
-          user: user.id as unknown as ApplicationUser,
-        });
+        await this.destroyExistingOnTokens(token.token);
+        const store = {
+          token: body.token,
+          user: user.id as unknown as UUID,
+        };
+        await agentUser.create(store as any);
         token = await agentUser.findOneBy({ token: body.token });
       }
       return token;
