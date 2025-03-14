@@ -47,14 +47,12 @@ export const setUserInCache = async (
   // await RedisClien
   const userTokenAgent = new QueryAgent<UserTokens>(UserTokens, {});
   const foundToken = await userTokenAgent.findOneBy({ token });
-  console.log("WHAT THOUWR", foundToken);
   if (!foundToken) {
     return;
   }
 
   const userAgent = new QueryAgent<ApplicationUser>(ApplicationUser, {});
   const foundUser = await userAgent.findOneById(user);
-  console.log("WHA THSUFHUISD", foundUser);
   if (!foundUser) {
     return;
   }
@@ -62,8 +60,8 @@ export const setUserInCache = async (
   const agentUserUpdate = new QueryAgent<UserTokens>(UserTokens, {
     where: { id: foundToken.id },
   });
-  await agentUserUpdate.updateById({
-    user: foundUser,
+  await agentUserUpdate.updateByQuery({
+    user: foundUser.id as unknown as ApplicationUser,
   });
   await setUserWithTokenInRedis(token, foundUser);
 };
