@@ -49,12 +49,16 @@ const setRoutes = (ellipsies: Ellipsies) => {
   );
 };
 
-// const pruneJobs = async () => {
-//   const repeatableJobs = await foreCastQueue.getJobSchedulers();
-//   for (const job of repeatableJobs) {
-//     await foreCastQueue.removeJobScheduler(job.key);
-//   }
-// };
+const pruneJobs = async () => {
+  const repeatableJobs = await foreCastQueue.getJobSchedulers();
+  for (const job of repeatableJobs) {
+    await foreCastQueue.removeJobScheduler(job.key);
+  }
+  const repeatableWarmingJobs = await prewarmCachingQueue.getJobSchedulers();
+  for (const job of repeatableWarmingJobs) {
+    await prewarmCachingQueue.removeJobScheduler(job.key);
+  }
+};
 
 const runNotificationTest = async () => {
   // const repeatableJobs = await prewarmCachingQueue.getJobSchedulers();
@@ -75,7 +79,7 @@ const run = async () => {
   setRoutes(ellipsies);
   await seedContent(["risks"], ellipsies.pgManager.datasource);
   await EllipsiesSocket(ellipsies, getRedisConfig());
-  // await pruneJobs();
+  await pruneJobs();
   await foreCastQueue.add(
     FORECAST_QUEUE_JOB,
     {},
