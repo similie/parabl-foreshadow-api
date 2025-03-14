@@ -56,6 +56,7 @@ export default class UserTokenController extends EllipsiesController<UserTokens>
     @Body() body: Partial<UserTokens>,
   ): Promise<UserTokens | UserTokens[] | null> {
     try {
+      const appUserAgent = new QueryAgent<ApplicationUser>(ApplicationUser, {});
       const agentUser = new QueryAgent<UserTokens>(UserTokens, {
         populate: ["user"],
       });
@@ -71,7 +72,6 @@ export default class UserTokenController extends EllipsiesController<UserTokens>
         token = (await agentUser.create(store as any)) as UserTokens;
       } else if (token && body.user) {
         // await this.destroyExistingTokens(body.user as unknown as UUID);
-        const appUserAgent = new QueryAgent<UserTokens>(UserTokens, {});
         const user = await appUserAgent.findOneById(body.user);
         if (!user) {
           return token;
@@ -79,8 +79,8 @@ export default class UserTokenController extends EllipsiesController<UserTokens>
         const agentUserUpdate = new QueryAgent<UserTokens>(UserTokens, {
           where: { id: token.id },
         });
-        await agentUserUpdate.updateById({
-          user: user,
+        await agentUserUpdate.updateByQuery({
+          user: user.id as unknown as ApplicationUser,
         });
         token = await agentUser.findOneBy({ token: body.token });
       }

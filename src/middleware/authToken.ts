@@ -7,13 +7,21 @@ import {
   QueryAgent,
 } from "@similie/ellipsies";
 import { UserTokens, VerificationToken } from "../models";
-import { findTokenInRequest } from "../utils";
+import {
+  findTokenInRequest,
+  getUserWithTokenInRedis,
+  setUserWithTokenInRedis,
+} from "../utils";
 
 const FindTokenUser = async (req: ExpressRequest) => {
   const token = findTokenInRequest(req);
-  // console.log('MY TOKENT', token);
   if (!token) {
     return null;
+  }
+
+  const cachedUser = await getUserWithTokenInRedis(token);
+  if (cachedUser) {
+    return cachedUser;
   }
 
   const agentUser = new QueryAgent<UserTokens>(UserTokens, {
@@ -22,6 +30,10 @@ const FindTokenUser = async (req: ExpressRequest) => {
   const tk = await agentUser.findOneBy({ token: token });
   if (!tk) {
     return null;
+  }
+  const user = tk?.user;
+  if (user) {
+    await setUserWithTokenInRedis(token, user);
   }
   return tk?.user || null;
 };

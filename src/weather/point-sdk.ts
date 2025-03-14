@@ -224,28 +224,6 @@ export class PointApi {
     return meta;
   }
 
-  public async rawPointForecast(
-    coords: LocationCoordinates,
-    days: number = PointApi.DAYS_TO_READ,
-    hours: number = PointApi.STEP_HOURS,
-    startTime: number = 0,
-  ): Promise<ForecastResponseDetails[]> {
-    const request = getWeatherRequestTemplate(coords);
-    request.total_days = days;
-    request.step_hours = hours;
-    if (startTime) {
-      request.start_hour_offset = startTime;
-    }
-
-    const response = await fetch(process.env.FORESHADOW_API_URL + "/forecast", {
-      method: "POST",
-      body: JSON.stringify(request),
-      headers: { "Content-Type": "application/json" },
-    });
-    const responseValues = (await response.json()) as ForecastResponseDetails[];
-    return responseValues;
-  }
-
   public static proxTileServer(
     req: ExpressRequest,
     res: ExpressResponse,
@@ -289,6 +267,30 @@ export class PointApi {
     }).catch(console.error);
   }
 
+  public async rawPointForecast(
+    coords: LocationCoordinates,
+    days: number = PointApi.DAYS_TO_READ,
+    hours: number = PointApi.STEP_HOURS,
+    startTime: number = 0,
+  ): Promise<ForecastResponseDetails[]> {
+    const request = getWeatherRequestTemplate(coords);
+    request.total_days = days;
+    request.step_hours = hours;
+    if (startTime) {
+      request.start_hour_offset = startTime;
+    }
+
+    const response = await fetch(process.env.FORESHADOW_API_URL + "/forecast", {
+      method: "POST",
+      body: JSON.stringify(request),
+      headers: { "Content-Type": "application/json" },
+    });
+
+    const responseValues = (await response.json()) as ForecastResponseDetails[];
+    console.log("GOT THIS FORECAST", responseValues);
+    return responseValues;
+  }
+
   public async rawPointWeather(
     coords: LocationCoordinates,
     startTime: number = 0,
@@ -303,6 +305,7 @@ export class PointApi {
       headers: { "Content-Type": "application/json" },
     });
     const values = (await response.json()) as PointForecastValue[];
+    console.log("GOT THIS RESPONSE", values);
     return values;
   }
 
@@ -339,17 +342,30 @@ export class PointApi {
 
   async prewarmForecast() {
     const point = this.getRandomGeoPoint();
-    await this.rawPointWeather(point, 1);
+    console.log("GETTING THIS POINT", point);
+    for (let i = 0; i < PointApi.STEP_HOURS; i++) {
+      try {
+        await this.rawPointWeather(point, i + 1);
+      } catch {
+        console.error("ERROR", i, point);
+      }
+    }
   }
 
   async prewarmPointForecast() {
     const point = this.getRandomGeoPoint();
-    await this.rawPointForecast(
-      point,
-      PointApi.DAYS_TO_READ,
-      PointApi.STEP_HOURS,
-      1,
-    );
+    for (let i = 0; i < PointApi.STEP_HOURS; i++) {
+      try {
+        await this.rawPointForecast(
+          point,
+          PointApi.DAYS_TO_READ,
+          PointApi.STEP_HOURS,
+          i + 1,
+        );
+      } catch {
+        console.error("ERROR", i, point);
+      }
+    }
   }
 
   getRandomGeoPoint(): { latitude: number; longitude: number } {

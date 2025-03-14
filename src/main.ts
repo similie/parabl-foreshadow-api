@@ -7,7 +7,7 @@ import {
 } from "@similie/ellipsies";
 import * as models from "./models";
 import * as controllers from "./controllers";
-import { EllipsiesSocket } from "./sockets";
+import { EllipsiesSocket, SocketServer } from "./sockets";
 import { getRedisConfig } from "./config";
 import { seedContent } from "./seeds";
 import {
@@ -19,6 +19,7 @@ import {
 import { PointApi } from "./weather";
 import { UserRequired } from "./middleware";
 import { tileMappingRoute } from "./utils/routes";
+import { setUserInCache } from "./utils";
 
 const eConfig = () => {
   return {
@@ -36,13 +37,14 @@ const ds = () => {
     password: process.env.DB_PASSWORD || "wrdims",
     host: process.env.DB_HOST || "localhost",
     port: 5432,
+    synchronize: false,
   };
 };
 
 const setRoutes = (ellipsies: Ellipsies) => {
   ellipsies.server.app.get(
     tileMappingRoute(COMMON_API_SERVICE_ROUTES),
-    // [UserRequired], // need to fix this
+    [UserRequired], // need to fix this
     PointApi.proxTileServer,
   );
 };
@@ -62,7 +64,7 @@ const runNotificationTest = async () => {
   await prewarmCachingQueue.add(
     CACHING_PREWARMING_JOB,
     {},
-    { repeat: { pattern: "0 */20 * * * *" } },
+    { repeat: { pattern: "0 */10 * * * *" } },
   );
 };
 
@@ -80,6 +82,13 @@ const run = async () => {
     { repeat: PointApi.POINT_CHECK_TIMER },
   );
   await runNotificationTest();
+
+  SocketServer.instance.subscribe(
+    "token",
+    async ({ token, user }: { token: string; user: string }) => {
+      await setUserInCache(token, user);
+    },
+  );
 };
 
 run();
