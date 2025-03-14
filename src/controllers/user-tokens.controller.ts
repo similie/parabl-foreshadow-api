@@ -46,8 +46,8 @@ export default class UserTokenController extends EllipsiesController<UserTokens>
         where: { user: userUid as unknown as ApplicationUser },
       });
       return agentUserDest.destroyAll();
-    } catch (e) {
-      console.error(e);
+    } catch (e: any) {
+      console.error("Error destroying user token", e.message);
     }
     return null;
   }
