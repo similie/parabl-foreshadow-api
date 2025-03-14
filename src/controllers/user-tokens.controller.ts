@@ -39,12 +39,17 @@ export default class UserTokenController extends EllipsiesController<UserTokens>
     return super.find(req);
   }
 
-  private destroyExistingOnUser(userUid: UUID) {
-    console.log("WHAT THE HE", userUid);
-    const agentUserDest = new QueryAgent<UserTokens>(UserTokens, {
-      where: { user: userUid as unknown as ApplicationUser },
-    });
-    return agentUserDest.destroyAll();
+  private async destroyExistingOnUser(userUid: UUID) {
+    try {
+      console.log("WHAT THE HE", userUid);
+      const agentUserDest = new QueryAgent<UserTokens>(UserTokens, {
+        where: { user: userUid as unknown as ApplicationUser },
+      });
+      return agentUserDest.destroyAll();
+    } catch (e) {
+      console.error(e);
+    }
+    return null;
   }
 
   // private destroyExistingOnTokens(token: string) {
@@ -77,7 +82,7 @@ export default class UserTokenController extends EllipsiesController<UserTokens>
         };
         if (body.user) {
           store.user = body.user as unknown as UUID;
-
+          console.log("WHY IS THIS GETTING BEACHED", store);
           await this.destroyExistingOnUser(body.user as unknown as UUID);
         }
         console.log("GOING TO STORE THIS HERE", store);
