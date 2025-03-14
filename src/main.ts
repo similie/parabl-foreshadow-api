@@ -49,22 +49,22 @@ const setRoutes = (ellipsies: Ellipsies) => {
   );
 };
 
-const pruneJobs = async () => {
-  const repeatableJobs = await foreCastQueue.getJobSchedulers();
-  for (const job of repeatableJobs) {
-    await foreCastQueue.removeJobScheduler(job.key);
-  }
-};
+// const pruneJobs = async () => {
+//   const repeatableJobs = await foreCastQueue.getJobSchedulers();
+//   for (const job of repeatableJobs) {
+//     await foreCastQueue.removeJobScheduler(job.key);
+//   }
+// };
 
 const runNotificationTest = async () => {
-  const repeatableJobs = await prewarmCachingQueue.getJobSchedulers();
-  for (const job of repeatableJobs) {
-    await prewarmCachingQueue.removeJobScheduler(job.key);
-  }
+  // const repeatableJobs = await prewarmCachingQueue.getJobSchedulers();
+  // for (const job of repeatableJobs) {
+  //   await prewarmCachingQueue.removeJobScheduler(job.key);
+  // }
   await prewarmCachingQueue.add(
     CACHING_PREWARMING_JOB,
     {},
-    { repeat: { pattern: "0 */20 * * * *" } },
+    { repeat: { pattern: "0 */30 * * * *" }, jobId: "prewarm-caching" },
   );
 };
 
@@ -75,11 +75,11 @@ const run = async () => {
   setRoutes(ellipsies);
   await seedContent(["risks"], ellipsies.pgManager.datasource);
   await EllipsiesSocket(ellipsies, getRedisConfig());
-  await pruneJobs();
+  // await pruneJobs();
   await foreCastQueue.add(
     FORECAST_QUEUE_JOB,
     {},
-    { repeat: PointApi.POINT_CHECK_TIMER },
+    { repeat: PointApi.POINT_CHECK_TIMER, jobId: "forecast-queue" },
   );
   await runNotificationTest();
 
