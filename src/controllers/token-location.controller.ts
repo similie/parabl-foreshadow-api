@@ -77,7 +77,9 @@ export default class TokenController extends EllipsiesController<TokenLocation> 
       return [];
     }
     try {
-      const agentToken = new QueryAgent<UserTokens>(UserTokens, {});
+      const agentToken = new QueryAgent<UserTokens>(UserTokens, {
+        populate: ["user"],
+      });
       const found = await agentToken.findOneBy({ token });
       console.log("WHAT AND I FOUND", found);
       if (!found || !found.user) {
