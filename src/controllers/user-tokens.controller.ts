@@ -41,11 +41,10 @@ export default class UserTokenController extends EllipsiesController<UserTokens>
 
   private async destroyExistingOnUser(userUid: UUID) {
     try {
-      console.log("WHAT THE HE", userUid);
       const agentUserDest = new QueryAgent<UserTokens>(UserTokens, {
         where: { user: userUid as unknown as ApplicationUser },
       });
-      return agentUserDest.destroyAll();
+      return await agentUserDest.destroyAll();
     } catch (e: any) {
       console.error("Error destroying user token", e.message);
     }
@@ -73,25 +72,21 @@ export default class UserTokenController extends EllipsiesController<UserTokens>
       const agentUser = new QueryAgent<UserTokens>(UserTokens, {
         populate: ["user"],
       });
-      console.log("STARTING HERE", body);
+      // console.log("STARTING HERE", body);
       let token = await agentUser.findOneBy({ token: body.token });
-      console.log("GOT THIS TOKEN", token);
+      // console.log("GOT THIS TOKEN", token);
       if (!token) {
         const store: { token: string; user?: UUID } = {
           token: body.token || "",
         };
         if (body.user) {
           store.user = body.user as unknown as UUID;
-          console.log("WHY IS THIS GETTING BEACHED", store);
           await this.destroyExistingOnUser(body.user as unknown as UUID);
         }
-        console.log("GOING TO STORE THIS HERE", store);
         token = (await agentUser.create(store as any)) as UserTokens;
       } else if (token && body.user) {
         // await this.destroyExistingTokens(body.user as unknown as UUID);
-
         const user = await appUserAgent.findOneById(body.user);
-        console.log("GETTING MY SHI", user);
         if (!user) {
           return token;
         }
@@ -103,7 +98,7 @@ export default class UserTokenController extends EllipsiesController<UserTokens>
         });
         token = await agentUser.findOneBy({ token: body.token });
       }
-      console.log("RETURNING THIS TOKEN", token);
+      // console.log("RETURNING THIS TOKEN", token);
       return token;
     } catch (e) {
       console.error(e);
