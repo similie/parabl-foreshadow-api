@@ -67,7 +67,9 @@ export default class UserTokenController extends EllipsiesController<UserTokens>
       const agentUser = new QueryAgent<UserTokens>(UserTokens, {
         populate: ["user"],
       });
+      console.log("STARTING HERE", body);
       let token = await agentUser.findOneBy({ token: body.token });
+      console.log("GOT THIS TOKEN", token);
       if (!token) {
         const store: { token: string; user?: UUID } = {
           token: body.token || "",
@@ -79,7 +81,9 @@ export default class UserTokenController extends EllipsiesController<UserTokens>
         token = (await agentUser.create(store as any)) as UserTokens;
       } else if (token && body.user) {
         // await this.destroyExistingTokens(body.user as unknown as UUID);
+
         const user = await appUserAgent.findOneById(body.user);
+        console.log("GETTING MY SHI", user);
         if (!user) {
           return token;
         }
@@ -91,6 +95,7 @@ export default class UserTokenController extends EllipsiesController<UserTokens>
         });
         token = await agentUser.findOneBy({ token: body.token });
       }
+      console.log("RETURNING THIS TOKEN", token);
       return token;
     } catch (e) {
       console.error(e);
