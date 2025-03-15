@@ -181,6 +181,7 @@ export const prewarmCachingQueue = new Queue(CACHING_PREWARMING_JOB, {
 export const prewarmCaching = new Worker(
   CACHING_PREWARMING_JOB,
   async () => {
+    console.log("I AM STARTING MY PREWARMING JOB");
     const api = new PointApi();
     try {
       await api.prewarmForecast();
