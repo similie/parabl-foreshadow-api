@@ -54,6 +54,12 @@ export interface PointForecastDetails
   extends WeatherMeta,
     PointForecastWeather {}
 
+export type PointForecastDetailsCallback =
+  | PointForecastDetails[]
+  | string
+  | {}
+  | { progress: string };
+
 export type ForecastParamSelect = {
   param_key: string;
   model?: string;

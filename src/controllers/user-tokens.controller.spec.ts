@@ -1,6 +1,6 @@
 import fetch from "isomorphic-fetch";
 import * as models from "../models";
-import * as controllers from "../controllers";
+import * as controllers from ".";
 import {
   Ellipsies,
   COMMON_API_SERVICE_ROUTES,

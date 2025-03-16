@@ -43,6 +43,7 @@ export const getUserWithTokenInRedis = async (
 export const setUserInCache = async (
   token: string,
   user: string,
+  socketId?: string,
 ): Promise<void> => {
   // await RedisClien
   const userTokenAgent = new QueryAgent<UserTokens>(UserTokens, {});
@@ -57,11 +58,14 @@ export const setUserInCache = async (
     return;
   }
 
-  const agentUserUpdate = new QueryAgent<UserTokens>(UserTokens, {
-    where: { id: foundToken.id },
-  });
-  await agentUserUpdate.updateByQuery({
-    user: foundUser.id as unknown as ApplicationUser,
-  });
+  const update: { user: ApplicationUser; socket?: string } = {
+    user: foundUser,
+  };
+
+  if (socketId) {
+    update.socket = socketId;
+  }
+
+  await UserTokens.update({ id: foundToken.id }, update);
   await setUserWithTokenInRedis(token, foundUser);
 };

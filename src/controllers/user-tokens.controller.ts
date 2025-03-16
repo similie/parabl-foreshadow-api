@@ -41,10 +41,9 @@ export default class UserTokenController extends EllipsiesController<UserTokens>
 
   private async destroyExistingOnUser(userUid: UUID) {
     try {
-      const agentUserDest = new QueryAgent<UserTokens>(UserTokens, {
-        where: { user: userUid as unknown as ApplicationUser },
+      return await UserTokens.delete({
+        user: { id: userUid } as unknown as ApplicationUser,
       });
-      return await agentUserDest.destroyAll();
     } catch (e: any) {
       console.error("Error destroying user token", e.message);
     }
@@ -68,13 +67,12 @@ export default class UserTokenController extends EllipsiesController<UserTokens>
     @Body() body: Partial<UserTokens>,
   ): Promise<UserTokens | UserTokens[] | null> {
     try {
-      const appUserAgent = new QueryAgent<ApplicationUser>(ApplicationUser, {});
+      // const appUserAgent = new QueryAgent<ApplicationUser>(ApplicationUser, {});
       const agentUser = new QueryAgent<UserTokens>(UserTokens, {
         populate: ["user"],
       });
       // console.log("STARTING HERE", body);
       let token = await agentUser.findOneBy({ token: body.token });
-      // console.log("GOT THIS TOKEN", token);
       if (!token) {
         const store: { token: string; user?: UUID } = {
           token: body.token || "",
@@ -86,19 +84,15 @@ export default class UserTokenController extends EllipsiesController<UserTokens>
         token = (await agentUser.create(store as any)) as UserTokens;
       } else if (token && body.user) {
         // await this.destroyExistingTokens(body.user as unknown as UUID);
-        const user = await appUserAgent.findOneById(body.user);
+        const user = await ApplicationUser.findOneBy({
+          id: body.user as unknown as UUID,
+        });
         if (!user) {
           return token;
         }
-        const agentUserUpdate = new QueryAgent<UserTokens>(UserTokens, {
-          where: { id: token.id },
-        });
-        await agentUserUpdate.updateByQuery({
-          user: user.id as unknown as ApplicationUser,
-        });
+        await UserTokens.update({ id: token.id }, { user: user });
         token = await agentUser.findOneBy({ token: body.token });
       }
-      // console.log("RETURNING THIS TOKEN", token);
       return token;
     } catch (e) {
       console.error(e);
