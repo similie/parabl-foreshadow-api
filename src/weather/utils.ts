@@ -48,6 +48,16 @@ export const getLocationName = async (coords: LocationCoordinates) => {
   }
 };
 
+export const isTesting = () => {
+  return process.env.NODE_ENV === "test";
+};
+
+export const delayAction = (timeout: number = 1000) => {
+  return new Promise((resolve) => {
+    setTimeout(() => resolve(null), timeout);
+  });
+};
+
 export const getDateUnixTimestamp = (date?: Date): number => {
   const currentDate = date || new Date();
   return Math.floor(currentDate.getTime() / 1000);

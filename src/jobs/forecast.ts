@@ -7,7 +7,7 @@ import {
   UserTokens,
 } from "../models";
 import { QueryAgent, UUID } from "@similie/ellipsies";
-import { PointApi } from "../weather";
+import { delayAction, isTesting, PointApi } from "../weather";
 import { SocketServer } from "../sockets";
 import { ForecastWarning } from "../types";
 import { sendPushNotification } from "../utils";
@@ -26,7 +26,6 @@ const createRiskJoins = async (risks: ForecastWarning[], ut: UserTokens) => {
   if (!user) {
     return;
   }
-  const agent = new QueryAgent<LocationRisk>(LocationRisk, {});
   const joins = [];
   for (const risk of risks) {
     const riskValues = {
@@ -34,17 +33,15 @@ const createRiskJoins = async (risks: ForecastWarning[], ut: UserTokens) => {
       risk: risk.risk.id,
       isActive: true,
     };
-    const agentD = new QueryAgent<LocationRisk>(LocationRisk, {
-      where: riskValues,
-    });
-    agentD.updateByQuery({ isActive: false });
+
+    await LocationRisk.update(riskValues, { isActive: false });
     joins.push({
       ...riskValues,
       onDate: new Date(risk.datetime),
     });
   }
 
-  return await agent.create(joins);
+  return await LocationRisk.create(joins);
 };
 
 const getUserToken = async (
@@ -56,13 +53,11 @@ const getUserToken = async (
     return userToken;
   }
 
-  const agent = new QueryAgent<UserTokens>(UserTokens, {
-    sort: { createdAt: "DESC" },
-    populate: ["user"],
-    limit: 1,
-    where: { user: userUid as unknown as ApplicationUser },
+  const users = await UserTokens.find({
+    where: { user: { id: userUid } as unknown as ApplicationUser },
+    order: { createdAt: "DESC" },
   });
-  const users = await agent.getObjects();
+
   if (!users || !Array.isArray(users) || !users.length) {
     return null;
   }
@@ -85,7 +80,7 @@ const broadcastEventsToUser = async (
   }
 };
 
-const applyToCompletionMap = async (
+const applyToCompletionMap = (
   risks: ForecastWarning[],
   ut: UserTokens,
   map: Map<UUID, ForecastWarning[]>,
@@ -107,7 +102,6 @@ const sendPushEvent = async (risks: ForecastWarning[], ut: UserTokens) => {
     return;
   }
   const token = ut.token;
-  ///ExponentPushToken[y-mt_cBKoJp_6o0LqRMZKe]
   if (!token || !token.includes("PushToken")) {
     return;
   }
@@ -129,17 +123,17 @@ const finalizeUserEvents = async (
       continue;
     }
     await sendPushEvent(risks, ut);
-    // await
   }
 };
 
 // export for running tests
 export const runJob = async () => {
   console.log("Running Job", new Date());
-  const agent = new QueryAgent<TokenLocation>(TokenLocation, {
-    sort: { user: "ASC" },
-  });
-  const locations = (await agent.getObjects()) as TokenLocation[];
+  // const agent = new QueryAgent<TokenLocation>(TokenLocation, {
+  //   sort: { user: "ASC" },
+  // });
+  const locations = await TokenLocation.find({ order: { user: "ASC" } }); //(await agent.getObjects()) as TokenLocation[];
+  console.log("GOT THESE LOCATIONS", locations);
   const pointApi = new PointApi();
   const userMap = new Map<UUID, UserTokens>();
   const completionMap = new Map<UUID, ForecastWarning[]>();
@@ -148,20 +142,39 @@ export const runJob = async () => {
       latitude: location.latitude,
       longitude: location.longitude,
     };
-    const forecast = await pointApi.rawPointForecast(coords, 4, 3);
-    const risks = await pointApi.raiseExtremeAlerts(forecast, location);
-    if (!risks.length) {
-      continue;
+    try {
+      const forecast = await pointApi.rawPointForecast(coords, 4, 3);
+      const risks = await pointApi.raiseExtremeAlerts(forecast, location);
+      if (!risks.length || !location.user) {
+        continue;
+      }
+      const userToken = await getUserToken(location.user, userMap);
+      if (!userToken) {
+        continue;
+      }
+      try {
+        await createRiskJoins(risks, userToken);
+        applyToCompletionMap(risks, userToken, completionMap);
+      } catch (e) {
+        console.error("Error running hob against locations ", runJob);
+      }
+    } catch (e: any) {
+      console.error("ERRORING PROCESSING LOCATION", e);
+      if (!isTesting()) {
+        await delayAction(1000 * 60 * 2);
+      }
     }
-    const userToken = await getUserToken(location.user, userMap);
-    if (!userToken) {
-      continue;
-    }
-    await createRiskJoins(risks, userToken);
-    applyToCompletionMap(risks, userToken, completionMap);
   }
-  finalizeUserEvents(completionMap, userMap);
-  console.log("Locations", locations);
+  console.log("Job run complete");
+  if (isTesting()) {
+    return completionMap;
+  }
+
+  try {
+    await finalizeUserEvents(completionMap, userMap);
+  } catch (e) {
+    console.error("ERROR RUNNING FINALIZE USER EVENTS", e);
+  }
 };
 
 export const foreCastWorker = new Worker(
@@ -181,7 +194,7 @@ export const prewarmCachingQueue = new Queue(CACHING_PREWARMING_JOB, {
 export const prewarmCaching = new Worker(
   CACHING_PREWARMING_JOB,
   async () => {
-    console.log("I AM STARTING MY PREWARMING JOB");
+    console.log("I AM STARTING MY PREWARMING JOB", new Date());
     const api = new PointApi();
     try {
       await api.prewarmForecast();
