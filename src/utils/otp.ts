@@ -7,7 +7,7 @@ import {
   timeConstants,
 } from "@similie/shared-microservice-utils";
 import { BadRequestError } from "routing-controllers";
-import { ExpressRequest, QueryAgent } from "@similie/ellipsies";
+import { ExpressRequest, MoreThan } from "@similie/ellipsies";
 const SALT_ROUNDS = 10;
 export const OPT_EXPIRE_IN_MINUTES = process.env.OPT_EXPIRE_IN_MINUTES
   ? +process.env.OPT_EXPIRE_IN_MINUTES
@@ -48,12 +48,11 @@ export const isValueIdentity = (value: string) => {
 };
 
 export const createdAtSearch = (time = OPT_EXPIRE_IN_MINUTES) => {
-  const createdAtSearch = {
-    ">=": new DateHelper(timeConstants.now_).minus(time, TimePeriod.minutes)
-      .toISO,
-  } as unknown as Date;
-
-  return createdAtSearch;
+  return MoreThan(
+    new Date(
+      new DateHelper(timeConstants.now_).minus(time, TimePeriod.minutes).toISO,
+    ),
+  );
 };
 
 const templateObject = (passcode: string) => {
@@ -118,10 +117,7 @@ export const issueOTP = async (otp: OTP) => {
 };
 
 export const invalidateAllOtp = async (identifier: string) => {
-  const queryAgent = new QueryAgent<OTP>(OTP, {
-    where: { identifier, active: true },
-  });
-  return queryAgent.updateByQuery({ active: false });
+  return OTP.update({ identifier, active: true }, { active: false });
 };
 
 export const validateOTP = async (values: Partial<OTP>) => {
@@ -133,8 +129,7 @@ export const validateOTP = async (values: Partial<OTP>) => {
 
 export const createOTP = async (values: Partial<OTP>) => {
   await validateOTP(values);
-  const queryAgent = new QueryAgent<OTP>(OTP, {});
-  const created = await queryAgent.create(values);
+  const created = await OTP.save(OTP.create(values));
   const createdOtp = Array.isArray(created) ? created[0] : created;
   if (!createdOtp) {
     throw new Error("Failed to create the OTP");

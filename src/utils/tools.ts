@@ -1,4 +1,4 @@
-import { ExpressRequest, QueryAgent } from "@similie/ellipsies";
+import { ExpressRequest, UUID } from "@similie/ellipsies";
 import { ApplicationUser, UserTokens } from "../models";
 import { RedisStore } from "../config";
 
@@ -46,14 +46,11 @@ export const setUserInCache = async (
   socketId?: string,
 ): Promise<void> => {
   // await RedisClien
-  const userTokenAgent = new QueryAgent<UserTokens>(UserTokens, {});
-  const foundToken = await userTokenAgent.findOneBy({ token });
+  const foundToken = await UserTokens.findOneBy({ token });
   if (!foundToken) {
     return;
   }
-
-  const userAgent = new QueryAgent<ApplicationUser>(ApplicationUser, {});
-  const foundUser = await userAgent.findOneById(user);
+  const foundUser = await ApplicationUser.findOneBy({ id: user as UUID });
   if (!foundUser) {
     return;
   }

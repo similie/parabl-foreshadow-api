@@ -15,11 +15,7 @@ import {
   PointForecastValue,
   WeatherMeta,
 } from "../types";
-import {
-  ExpressRequest,
-  ExpressResponse,
-  QueryAgent,
-} from "@similie/ellipsies";
+import { ExpressRequest, ExpressResponse } from "@similie/ellipsies";
 import { RiskIndicator, TokenLocation } from "../models";
 import { RiskIndicatorMapValue } from "../utils";
 import * as http from "http";
@@ -48,13 +44,8 @@ export class PointApi {
     if (PointApi.ALL_RISK_VALUES.length) {
       return PointApi.ALL_RISK_VALUES;
     }
-
-    const agent = new QueryAgent<RiskIndicator>(RiskIndicator, {
-      where: { isActive: true },
-    });
-    const allRisks = (await agent.getObjects()) as RiskIndicator[];
+    const allRisks = await RiskIndicator.find({ where: { isActive: true } });
     PointApi.ALL_RISK_VALUES.push(...allRisks);
-
     return allRisks;
   }
 
@@ -456,18 +447,5 @@ export class PointApi {
         });
       });
     };
-    // const reader = (response.body as any).getReader();
-    // const decoder = new TextDecoder();
-    // try {
-    //   while (true) {
-    //     const { done, value } = await reader.read();
-    //     if (done) break;
-    //     // Decode the Uint8Array chunk to a string
-    //     const chunk = decoder.decode(value, { stream: true });
-    //     console.log("Received chunk:", chunk);
-    //   }
-    // } catch (error) {
-    //   console.error("Stream error:", error);
-    // }
   }
 }

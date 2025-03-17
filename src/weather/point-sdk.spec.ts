@@ -10,12 +10,11 @@ import {
   INTERNAL_SERVICE_PORTS,
   testDataSourceCredentials,
   defaultTestDataSourceOpt,
-  QueryAgent,
 } from "@similie/ellipsies";
 import { generateUniqueId } from "../utils/tools";
 import { seedContent } from "../seeds";
 import { runJob } from "../jobs";
-const testEmail = "adam.smith@similie.org";
+const testEmail = process.env.TEST_EMAIL_ADDRESS;
 const thisPort = INTERNAL_SERVICE_PORTS.TEST - 1;
 const ellipsies = new Ellipsies({
   models,
@@ -33,6 +32,10 @@ const testUser = {
 const artifacts: Record<string, any> = {};
 describe("Pont forecast API", () => {
   beforeAll(async () => {
+    if (!testEmail) {
+      throw new Error("Please set the TEST_EMAIL_ADDRESS environment variable");
+    }
+
     await ellipsies.setDataSource(
       testDataSourceCredentials(),
       defaultTestDataSourceOpt(),
@@ -45,11 +48,9 @@ describe("Pont forecast API", () => {
   });
 
   it("should create a new user", async () => {
-    const userQ = new QueryAgent<models.ApplicationUser>(
-      models.ApplicationUser,
-      {},
+    artifacts.testUser = await models.ApplicationUser.save(
+      models.ApplicationUser.create(testUser),
     );
-    artifacts.testUser = await userQ.create(testUser);
     expect(artifacts.testUser.id).toBeDefined();
   });
 
@@ -72,17 +73,19 @@ describe("Pont forecast API", () => {
   });
 
   it("should assign token locations to our user ", async () => {
-    const tl = new QueryAgent<models.TokenLocation>(models.TokenLocation, {});
+    // const tl = new QueryAgent<models.TokenLocation>(models.TokenLocation, {});
     const storedLocations = [];
     const locationLength = 5;
     for (let i = 0; i < locationLength; i++) {
       const point = api.getRandomGeoPoint();
-      const location = (await tl.create({
-        user: artifacts.testUser.id,
-        name: `location-${i}`,
-        latitude: point.latitude,
-        longitude: point.longitude,
-      })) as models.TokenLocation;
+      const location = (await models.TokenLocation.save(
+        models.TokenLocation.create({
+          user: artifacts.testUser.id,
+          name: `location-${i}`,
+          latitude: point.latitude,
+          longitude: point.longitude,
+        }),
+      )) as models.TokenLocation;
       if (!location) {
         throw new Error("Could not create location");
       }
