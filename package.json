@@ -4,10 +4,12 @@
   "description": "API for managing foreshadow mobile app",
   "main": "dist/main.js",
   "scripts": {
-    "test": "jest",
+    "test": "jest --runInBand",
     "start": "node dist/main.js",
     "build": "tsc && npm run copy-ejs",
-    "copy-ejs": "copyfiles -u 1 'src/**/*.ejs' dist/"
+    "copy-ejs": "copyfiles -u 1 'src/**/*.ejs' dist/",
+    "release": "npm run build && standard-version",
+    "docs": "./node_modules/typedoc/bin/typedoc --entryPointStrategy expand --out docs src"
   },
   "author": "",
   "license": "ISC",
@@ -43,7 +45,7 @@
     "standard-version": "^9.5.0",
     "ts-jest": "^29.2.5",
     "ts-node": "^10.9.2",
-    "typedoc": "^0.27.4",
+    "typedoc": "^0.27.9",
     "typescript": "^5.7.2"
   }
 }

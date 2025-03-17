@@ -7,10 +7,9 @@ import {
   INTERNAL_SERVICE_PORTS,
   testDataSourceCredentials,
   defaultTestDataSourceOpt,
-  QueryAgent,
 } from "@similie/ellipsies";
 import { generateUniqueId } from "../utils/tools";
-const testEmail = "adam.smith@similie.org";
+const testEmail = process.env.TEST_EMAIL_ADDRESS;
 const thisPort = INTERNAL_SERVICE_PORTS.TEST - 1;
 const ellipsies = new Ellipsies({
   models,
@@ -28,6 +27,10 @@ const testUser = {
 const artifacts: Record<string, any> = {};
 describe("UserTokenControllerTest", () => {
   beforeAll(async () => {
+    if (!testEmail) {
+      throw new Error("Please set the TEST_EMAIL_ADDRESS environment variable");
+    }
+
     await ellipsies.setDataSource(
       testDataSourceCredentials(),
       defaultTestDataSourceOpt(),
@@ -39,11 +42,9 @@ describe("UserTokenControllerTest", () => {
   });
 
   it("should create a new user", async () => {
-    const userQ = new QueryAgent<models.ApplicationUser>(
-      models.ApplicationUser,
-      {},
+    artifacts.testUser = await models.ApplicationUser.save(
+      models.ApplicationUser.create(testUser),
     );
-    artifacts.testUser = await userQ.create(testUser);
     expect(artifacts.testUser.id).toBeDefined();
   });
 

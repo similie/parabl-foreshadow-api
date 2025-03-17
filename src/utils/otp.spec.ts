@@ -10,9 +10,8 @@ import {
   defaultTestDataSourceOpt,
 } from "@similie/ellipsies";
 import { generateUniqueId } from "./tools";
-const testEmail = "adam.smith@similie.org";
+const testEmail = process.env.TEST_EMAIL_ADDRESS;
 const artifacts: Record<string, any> = {};
-console.log("WHY IS THIS FAILING", models);
 const ellipsies = new Ellipsies({
   models,
   controllers,
@@ -22,6 +21,10 @@ const ellipsies = new Ellipsies({
 const baseURL = `http://localhost:${INTERNAL_SERVICE_PORTS.TEST}${COMMON_API_SERVICE_ROUTES}`;
 describe("OTP Code Generation", () => {
   beforeAll(async () => {
+    if (!testEmail) {
+      throw new Error("Please set the TEST_EMAIL_ADDRESS environment variable");
+    }
+
     await ellipsies.setDataSource(
       testDataSourceCredentials(),
       defaultTestDataSourceOpt(),

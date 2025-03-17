@@ -82,7 +82,7 @@ const run = async () => {
   await EllipsiesSocket(ellipsies, getRedisConfig());
   await pruneJobs();
 
-  // await runSystemJobs();
+  await runSystemJobs();
 
   SocketServer.instance.subscribe(
     "token",

@@ -6,7 +6,7 @@ import {
   TokenLocation,
   UserTokens,
 } from "../models";
-import { QueryAgent, UUID } from "@similie/ellipsies";
+import { UUID } from "@similie/ellipsies";
 import { delayAction, isTesting, PointApi } from "../weather";
 import { SocketServer } from "../sockets";
 import { ForecastWarning } from "../types";
@@ -129,11 +129,7 @@ const finalizeUserEvents = async (
 // export for running tests
 export const runJob = async () => {
   console.log("Running Job", new Date());
-  // const agent = new QueryAgent<TokenLocation>(TokenLocation, {
-  //   sort: { user: "ASC" },
-  // });
   const locations = await TokenLocation.find({ order: { user: "ASC" } }); //(await agent.getObjects()) as TokenLocation[];
-  console.log("GOT THESE LOCATIONS", locations);
   const pointApi = new PointApi();
   const userMap = new Map<UUID, UserTokens>();
   const completionMap = new Map<UUID, ForecastWarning[]>();
