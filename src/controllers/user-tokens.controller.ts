@@ -44,16 +44,16 @@ export default class UserTokenController extends EllipsiesController<UserTokens>
     return super.find(req);
   }
 
-  private async destroyExistingOnUser(userUid: UUID) {
-    try {
-      return await UserTokens.delete({
-        user: { id: userUid } as unknown as ApplicationUser,
-      });
-    } catch (e: any) {
-      console.error("Error destroying user token", e.message);
-    }
-    return null;
-  }
+  // private async destroyExistingOnUser(userUid: UUID) {
+  //   try {
+  //     return await UserTokens.delete({
+  //       user: { id: userUid } as unknown as ApplicationUser,
+  //     });
+  //   } catch (e: any) {
+  //     console.error("Error destroying user token", e.message);
+  //   }
+  //   return null;
+  // }
 
   private async generateNewToken(token: string, user: UUID) {
     const store: { token: string; user?: UUID } = {
@@ -61,7 +61,7 @@ export default class UserTokenController extends EllipsiesController<UserTokens>
     };
     if (user) {
       store.user = user;
-      await this.destroyExistingOnUser(user);
+      // await this.destroyExistingOnUser(user);
     }
     const createdToken = (await UserTokens.save(
       UserTokens.create(store as any),
