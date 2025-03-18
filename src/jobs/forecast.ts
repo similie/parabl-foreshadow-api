@@ -197,6 +197,9 @@ export const prewarmCaching = new Worker(
     } catch {
       //
     }
+
+    await api.prewarmMappingLayers();
+
     try {
       await api.prewarmPointForecast();
     } catch {

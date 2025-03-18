@@ -12,6 +12,7 @@ import {
   Param,
   ExpressRequest,
   IDValue,
+  In,
 } from "@similie/ellipsies";
 import { ApplicationUser, OTP, VerificationToken } from "../models";
 import {
@@ -71,7 +72,7 @@ export default class OTPController extends EllipsiesController<OTP> {
     }
 
     return {
-      identifier: search as unknown as string,
+      identifier: In(search),
       active: true,
       createdAt: createdAtSearch(),
     };

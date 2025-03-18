@@ -7,7 +7,7 @@ import {
   timeConstants,
 } from "@similie/shared-microservice-utils";
 import { BadRequestError } from "routing-controllers";
-import { ExpressRequest, MoreThan } from "@similie/ellipsies";
+import { ExpressRequest, MoreThanOrEqual } from "@similie/ellipsies";
 const SALT_ROUNDS = 10;
 export const OPT_EXPIRE_IN_MINUTES = process.env.OPT_EXPIRE_IN_MINUTES
   ? +process.env.OPT_EXPIRE_IN_MINUTES
@@ -48,7 +48,7 @@ export const isValueIdentity = (value: string) => {
 };
 
 export const createdAtSearch = (time = OPT_EXPIRE_IN_MINUTES) => {
-  return MoreThan(
+  return MoreThanOrEqual(
     new Date(
       new DateHelper(timeConstants.now_).minus(time, TimePeriod.minutes).toISO,
     ),

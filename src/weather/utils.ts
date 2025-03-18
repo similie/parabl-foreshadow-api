@@ -1,5 +1,6 @@
 /* eslint-disable max-len */
 import {
+  ForecastParamSelect,
   LocalTimeValues,
   LocationCoordinates,
   SunRiseSetValues,
@@ -186,6 +187,46 @@ export const getGeoTime = (
   };
 };
 
+export const defaultMappingLayers = (): ForecastParamSelect[] => {
+  return [
+    {
+      param_key: "total-cloud-cover",
+      level: 0,
+      typeOfLevel: "atmosphere",
+      stepType: "avg",
+      model: "gfs",
+    },
+    {
+      param_key: "2-metre-relative-humidity",
+      typeOfLevel: "heightAboveGround",
+      level: 2,
+      stepType: "instant",
+      model: "gfs",
+    },
+    {
+      param_key: "2-metre-temperature",
+      typeOfLevel: "heightAboveGround",
+      level: 2,
+      stepType: "instant",
+      model: "gfs",
+    },
+    {
+      param_key: "wind-speed-gust",
+      stepType: "instant",
+      typeOfLevel: "surface",
+      level: 0,
+      model: "gfs",
+    },
+    {
+      param_key: "total-precipitation",
+      stepType: "accum",
+      typeOfLevel: "surface",
+      level: 0,
+      model: "gfs",
+    },
+  ];
+};
+
 export const getWeatherRequestTemplate = (
   coords: LocationCoordinates,
 ): WeatherRequest => {
@@ -193,28 +234,6 @@ export const getWeatherRequestTemplate = (
     lat: coords.latitude,
     lon: coords.longitude,
     model: "gfs",
-    param_keys: [
-      {
-        param_key: "total-cloud-cover",
-        level: 0,
-        typeOfLevel: "atmosphere",
-        stepType: "avg",
-      },
-      {
-        param_key: "2-metre-relative-humidity",
-        typeOfLevel: "heightAboveGround",
-        level: 2,
-      },
-      {
-        param_key: "2-metre-temperature",
-        typeOfLevel: "heightAboveGround",
-        level: 2,
-      },
-      { param_key: "wind-speed-gust" },
-      {
-        param_key: "total-precipitation",
-        stepType: "accum",
-      },
-    ],
+    param_keys: defaultMappingLayers(),
   };
 };

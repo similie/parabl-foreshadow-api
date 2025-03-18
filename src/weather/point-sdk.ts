@@ -1,12 +1,14 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import fetch from "node-fetch";
 import {
+  defaultMappingLayers,
   getGeoTime,
   getLocationName,
   getWeatherRequestTemplate,
   isDayAtLocation,
 } from "./utils";
 import {
+  ForecastParamSelect,
   ForecastResponseDetails,
   ForecastWarning,
   LocationCoordinates,
@@ -229,17 +231,13 @@ export class PointApi {
       const append = joinedPath.slice(index).join("/"); // use slice instead of splice to avoid mutating array
       const targetHost = process.env.FORESHADOW_API_URL + `/${append}`;
       const targetUrl = new URL(targetHost);
-
       // Serialize query parameters and remove authorization if present.
       targetUrl.search = new URLSearchParams(req.query as any).toString();
       targetUrl.searchParams.delete("authorization");
-
       // Log target URL (remove or comment out in production)
       console.log("Requesting tile from:", targetUrl.toString());
-
       // Select the appropriate agent based on the protocol.
       const agent = targetUrl.protocol === "https:" ? httpsAgent : httpAgent;
-
       // Use get with the agent option.
       const lib = targetUrl.protocol === "https:" ? https : http;
       lib
@@ -343,7 +341,7 @@ export class PointApi {
     }
   }
 
-  async prewarmForecast() {
+  public async prewarmForecast() {
     const point = this.getRandomGeoPoint();
     for (let i = 0; i < PointApi.STEP_HOURS; i++) {
       try {
@@ -354,7 +352,7 @@ export class PointApi {
     }
   }
 
-  async prewarmPointForecast() {
+  public async prewarmPointForecast() {
     const point = this.getRandomGeoPoint();
     for (let i = 0; i < PointApi.STEP_HOURS; i++) {
       const hour = i + 1;
@@ -386,11 +384,64 @@ export class PointApi {
     }
   }
 
+  public async prewarmMappingLayers() {
+    const layers = defaultMappingLayers();
+    for (const layer of layers) {
+      try {
+        for (let i = 0; i < PointApi.STEP_HOURS; i++) {
+          await this.getMapLayers(layer, i + 1);
+        }
+      } catch (e: any) {
+        console.error("ERROR PREWARMING MAP", e.message);
+      }
+    }
+  }
+
   public getRandomGeoPoint(): { latitude: number; longitude: number } {
     const latitude = (Math.random() * 180 - 90).toFixed(6); // Random latitude between -90 and 90
     const longitude = (Math.random() * 360 - 180).toFixed(6); // Random longitude between -180 and 180
 
     return { latitude: parseFloat(latitude), longitude: parseFloat(longitude) };
+  }
+
+  async getMapLayers(
+    param: ForecastParamSelect,
+    hour: number = 0,
+    z: number = 0,
+    x: number = 0,
+    y: number = 0,
+  ) {
+    const params = new URLSearchParams();
+    if (process.env.FORESHADOW_API_KEY) {
+      params.set("authorization", process.env.FORESHADOW_API_KEY);
+    }
+
+    const noKey = ["param_key", "model"];
+    for (const key in param) {
+      if (noKey.indexOf(key) !== -1) {
+        continue;
+      }
+      const value = param[key as keyof ForecastParamSelect];
+      if (value === undefined) {
+        continue;
+      }
+      params.append(key, value.toString());
+    }
+
+    //tiles/${model}/${field}/${time}/{z}/{x}/{y}${MAP_IMAGE_FORMAT}
+    const url =
+      process.env.FORESHADOW_API_URL +
+      `/tiles/${param.model || "gfs"}/${
+        param.param_key
+      }/${hour}/${z}/${x}/${y}.png?${params.toString()}`;
+    console.log("WARMING MAP LAYER", url);
+    const response = await fetch(url, {
+      method: "GET",
+      headers: { "Content-Type": "application/json" },
+    });
+
+    const responseValues = (await response.buffer()) as any;
+    return responseValues;
   }
 
   async streamForecast(

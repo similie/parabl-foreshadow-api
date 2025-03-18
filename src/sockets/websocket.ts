@@ -41,9 +41,9 @@ export class SocketServer {
 
     this._io.on("connection", (ws: Socket) => {
       ws.on("close", () => {});
-      ws.onAny((topic: string, message: any) => {
-        console.log("Broadcast Message: @todo", topic, message);
-      });
+      // ws.onAny((topic: string, message: any) => {
+      //   console.log("Broadcast Message: @todo", topic, message);
+      // });
     });
   }
 
