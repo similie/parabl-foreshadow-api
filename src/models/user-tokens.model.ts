@@ -14,7 +14,10 @@ export default class UserTokens extends EllipsiesBaseModelUUID {
   public token: string;
   @Column("varchar", { name: "socket", nullable: true })
   public socket?: string;
-  @ManyToOne(() => ApplicationUser, { nullable: true })
-  @JoinColumn({ name: "user" })
+  @ManyToOne(() => ApplicationUser, (user) => user.id, {
+    nullable: true,
+    onDelete: "CASCADE",
+  })
+  @JoinColumn({ name: "user_id" })
   public user?: ApplicationUser | null;
 }

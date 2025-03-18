@@ -136,7 +136,13 @@ export default class OTPController extends EllipsiesController<OTP> {
     await this.invalidateAllOtp(body.identifier);
     // console.log('BODY IS SO HOT IT HURTS', body);
     const created = (await super.create(body)) as OTP;
-    return issueOTP(created);
+
+    try {
+      const issued = await issueOTP(created);
+      return issued;
+    } catch (e: any) {
+      throw new BadRequestError(e.message);
+    }
   }
 
   /**

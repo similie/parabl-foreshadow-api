@@ -37,7 +37,7 @@ const ds = () => {
     password: process.env.DB_PASSWORD || "wrdims",
     host: process.env.DB_HOST || "localhost",
     port: 5432,
-    synchronize: false,
+    synchronize: process.env.NODE_ENV !== "production",
   };
 };
 
