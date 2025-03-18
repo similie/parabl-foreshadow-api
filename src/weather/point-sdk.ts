@@ -1,24 +1,23 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import fetch from "node-fetch";
 import {
+  defaultMappingLayers,
   getGeoTime,
   getLocationName,
   getWeatherRequestTemplate,
   isDayAtLocation,
 } from "./utils";
 import {
+  ForecastParamSelect,
   ForecastResponseDetails,
   ForecastWarning,
   LocationCoordinates,
   PointForecastDetails,
+  PointForecastDetailsCallback,
   PointForecastValue,
   WeatherMeta,
 } from "../types";
-import {
-  ExpressRequest,
-  ExpressResponse,
-  QueryAgent,
-} from "@similie/ellipsies";
+import { ExpressRequest, ExpressResponse } from "@similie/ellipsies";
 import { RiskIndicator, TokenLocation } from "../models";
 import { RiskIndicatorMapValue } from "../utils";
 import * as http from "http";
@@ -47,13 +46,8 @@ export class PointApi {
     if (PointApi.ALL_RISK_VALUES.length) {
       return PointApi.ALL_RISK_VALUES;
     }
-
-    const agent = new QueryAgent<RiskIndicator>(RiskIndicator, {
-      where: { isActive: true },
-    });
-    const allRisks = (await agent.getObjects()) as RiskIndicator[];
+    const allRisks = await RiskIndicator.find({ where: { isActive: true } });
     PointApi.ALL_RISK_VALUES.push(...allRisks);
-
     return allRisks;
   }
 
@@ -156,6 +150,9 @@ export class PointApi {
     const riskMap = this.alertsToMap(allRisks);
     for (const detail of details) {
       for (const value of detail.values) {
+        if (!value || !value.metadata) {
+          continue;
+        }
         const risks = riskMap[value.metadata.shortName];
         if (!risks || !risks.length) {
           continue;
@@ -224,28 +221,6 @@ export class PointApi {
     return meta;
   }
 
-  public async rawPointForecast(
-    coords: LocationCoordinates,
-    days: number = PointApi.DAYS_TO_READ,
-    hours: number = PointApi.STEP_HOURS,
-    startTime: number = 0,
-  ): Promise<ForecastResponseDetails[]> {
-    const request = getWeatherRequestTemplate(coords);
-    request.total_days = days;
-    request.step_hours = hours;
-    if (startTime) {
-      request.start_hour_offset = startTime;
-    }
-
-    const response = await fetch(process.env.FORESHADOW_API_URL + "/forecast", {
-      method: "POST",
-      body: JSON.stringify(request),
-      headers: { "Content-Type": "application/json" },
-    });
-    const responseValues = (await response.json()) as ForecastResponseDetails[];
-    return responseValues;
-  }
-
   public static proxTileServer(
     req: ExpressRequest,
     res: ExpressResponse,
@@ -256,17 +231,13 @@ export class PointApi {
       const append = joinedPath.slice(index).join("/"); // use slice instead of splice to avoid mutating array
       const targetHost = process.env.FORESHADOW_API_URL + `/${append}`;
       const targetUrl = new URL(targetHost);
-
       // Serialize query parameters and remove authorization if present.
       targetUrl.search = new URLSearchParams(req.query as any).toString();
       targetUrl.searchParams.delete("authorization");
-
       // Log target URL (remove or comment out in production)
       console.log("Requesting tile from:", targetUrl.toString());
-
       // Select the appropriate agent based on the protocol.
       const agent = targetUrl.protocol === "https:" ? httpsAgent : httpAgent;
-
       // Use get with the agent option.
       const lib = targetUrl.protocol === "https:" ? https : http;
       lib
@@ -287,6 +258,38 @@ export class PointApi {
           reject(err);
         });
     }).catch(console.error);
+  }
+
+  private setupForecastParameters(
+    coords: LocationCoordinates,
+    days: number = PointApi.DAYS_TO_READ,
+    hours: number = PointApi.STEP_HOURS,
+    startTime: number = 0,
+  ) {
+    const request = getWeatherRequestTemplate(coords);
+    request.total_days = days;
+    request.step_hours = hours;
+    if (startTime) {
+      request.start_hour_offset = startTime;
+    }
+
+    return JSON.stringify(request);
+  }
+
+  public async rawPointForecast(
+    coords: LocationCoordinates,
+    days: number = PointApi.DAYS_TO_READ,
+    hours: number = PointApi.STEP_HOURS,
+    startTime: number = 0,
+  ): Promise<ForecastResponseDetails[]> {
+    const response = await fetch(process.env.FORESHADOW_API_URL + "/forecast", {
+      method: "POST",
+      body: this.setupForecastParameters(coords, days, hours, startTime),
+      headers: { "Content-Type": "application/json" },
+    });
+
+    const responseValues = (await response.json()) as ForecastResponseDetails[];
+    return responseValues;
   }
 
   public async rawPointWeather(
@@ -324,9 +327,10 @@ export class PointApi {
   ): Promise<PointForecastDetails> {
     try {
       const values = await this.rawPointWeather(coords);
+
       const meta = await this.getWeatherMeta(coords);
       const results: PointForecastDetails = {
-        values,
+        values: values.filter((v) => v !== null),
         ...meta,
       };
       await this.raiseAlerts([results]);
@@ -337,25 +341,162 @@ export class PointApi {
     }
   }
 
-  async prewarmForecast() {
+  public async prewarmForecast() {
     const point = this.getRandomGeoPoint();
-    await this.rawPointWeather(point, 1);
+    for (let i = 0; i < PointApi.STEP_HOURS; i++) {
+      try {
+        await this.rawPointWeather(point, i + 1);
+      } catch {
+        console.error("ERROR", i, point);
+      }
+    }
   }
 
-  async prewarmPointForecast() {
+  public async prewarmPointForecast() {
     const point = this.getRandomGeoPoint();
-    await this.rawPointForecast(
-      point,
-      PointApi.DAYS_TO_READ,
-      PointApi.STEP_HOURS,
-      1,
-    );
+    for (let i = 0; i < PointApi.STEP_HOURS; i++) {
+      const hour = i + 1;
+      console.log(`Starting prewarming hour: ${hour}`);
+      const stream = await this.streamForecast(
+        point,
+        PointApi.DAYS_TO_READ,
+        PointApi.STEP_HOURS,
+        hour,
+      );
+      try {
+        await stream((data: any) => {
+          if (
+            !data ||
+            (typeof data !== "string" && Object.keys(data).length === 0)
+          ) {
+            return;
+          }
+
+          if (data.progress) {
+            return console.log("Forecast Progress", data.progress);
+          }
+
+          console.log(`Forecast for hour: ${hour}`, data);
+        });
+      } catch (e) {
+        console.log(e);
+      }
+    }
   }
 
-  getRandomGeoPoint(): { latitude: number; longitude: number } {
+  public async prewarmMappingLayers() {
+    const layers = defaultMappingLayers();
+    for (const layer of layers) {
+      try {
+        for (let i = 0; i < PointApi.STEP_HOURS; i++) {
+          await this.getMapLayers(layer, i + 1);
+        }
+      } catch (e: any) {
+        console.error("ERROR PREWARMING MAP", e.message);
+      }
+    }
+  }
+
+  public getRandomGeoPoint(): { latitude: number; longitude: number } {
     const latitude = (Math.random() * 180 - 90).toFixed(6); // Random latitude between -90 and 90
     const longitude = (Math.random() * 360 - 180).toFixed(6); // Random longitude between -180 and 180
 
     return { latitude: parseFloat(latitude), longitude: parseFloat(longitude) };
+  }
+
+  async getMapLayers(
+    param: ForecastParamSelect,
+    hour: number = 0,
+    z: number = 0,
+    x: number = 0,
+    y: number = 0,
+  ) {
+    const params = new URLSearchParams();
+    if (process.env.FORESHADOW_API_KEY) {
+      params.set("authorization", process.env.FORESHADOW_API_KEY);
+    }
+
+    const noKey = ["param_key", "model"];
+    for (const key in param) {
+      if (noKey.indexOf(key) !== -1) {
+        continue;
+      }
+      const value = param[key as keyof ForecastParamSelect];
+      if (value === undefined) {
+        continue;
+      }
+      params.append(key, value.toString());
+    }
+
+    //tiles/${model}/${field}/${time}/{z}/{x}/{y}${MAP_IMAGE_FORMAT}
+    const url =
+      process.env.FORESHADOW_API_URL +
+      `/tiles/${param.model || "gfs"}/${
+        param.param_key
+      }/${hour}/${z}/${x}/${y}.png?${params.toString()}`;
+    console.log("WARMING MAP LAYER", url);
+    const response = await fetch(url, {
+      method: "GET",
+      headers: { "Content-Type": "application/json" },
+    });
+
+    const responseValues = (await response.buffer()) as any;
+    return responseValues;
+  }
+
+  async streamForecast(
+    coords: LocationCoordinates,
+    days: number = PointApi.DAYS_TO_READ,
+    hours: number = PointApi.STEP_HOURS,
+    startTime: number = 0,
+  ): Promise<
+    (
+      cb: (data: PointForecastDetailsCallback) => Promise<void> | void,
+    ) => Promise<void>
+  > {
+    const response = await fetch(
+      process.env.FORESHADOW_API_URL + "/forecast-stream",
+      {
+        method: "POST",
+        body: this.setupForecastParameters(coords, days, hours, startTime),
+        headers: { "Content-Type": "application/json" },
+      },
+    );
+
+    if (!response.body) {
+      throw new Error("No response body");
+    }
+
+    return (
+      cb: (data: PointForecastDetailsCallback) => Promise<void> | void,
+    ): Promise<void> => {
+      return new Promise<void>((resolve, reject) => {
+        let data = "";
+        response.body.on("data", (chunk: Buffer) => {
+          const chunkStr = chunk.toString();
+          data += chunkStr;
+          if (!data.endsWith("\n")) {
+            return;
+          }
+          // console.log("Received chunk:", data);
+          try {
+            cb(JSON.parse(data));
+          } catch {
+            cb(data);
+          }
+          data = "";
+        });
+
+        response.body.on("end", () => {
+          console.log("Stream ended");
+          resolve();
+        });
+
+        response.body.on("error", (err: Error) => {
+          console.error("Stream error:", err);
+          reject(err.message);
+        });
+      });
+    };
   }
 }

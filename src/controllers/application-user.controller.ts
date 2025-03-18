@@ -5,14 +5,13 @@ import {
   EllipsiesExtends,
   Req,
   UseBefore,
-  QueryAgent,
   Post,
   Get,
   BadRequestError,
   QueryParam,
   ExpressRequest,
-  // ExpressRequest,
-  // Param,
+  FindOptionsWhere,
+  UUID,
 } from "@similie/ellipsies";
 
 import { ApplicationUser, OTP, UserAgreement, UserTokens } from "../models";
@@ -31,17 +30,38 @@ export default class ApplicationUserController extends EllipsiesController<Appli
   public async isRegistered(
     @Body() body: Partial<ApplicationUser>,
   ): Promise<{ registered: boolean }> {
-    const agentUser = new QueryAgent<ApplicationUser>(ApplicationUser, {
-      where: body,
+    const values = await ApplicationUser.find({
+      where: body as FindOptionsWhere<ApplicationUser>,
     });
-    const values = (await agentUser.getObjects()) as ApplicationUser[];
     return { registered: !!values.length };
   }
 
   @Get("/license")
   public async getLicense() {
-    const agentUser = new QueryAgent<UserAgreement>(UserAgreement, {});
-    return agentUser.findOneBy({ active: true });
+    return UserAgreement.findOne({ where: { active: true } });
+  }
+
+  @Post("/logout")
+  public async Logout(@Body() body: { token: string; user: UUID }) {
+    if (!body.user) {
+      return { error: "Invalid User Provided" };
+    }
+
+    try {
+      const found = await UserTokenController.searchToken(body.token);
+      if (!found) {
+        return { error: "Invalid Token Provided" };
+      }
+      if (found.user?.id !== body.user) {
+        return { error: "Invalid User Provided" };
+      }
+
+      await UserTokens.update({ token: body.token }, { user: null });
+      return { result: "ok" };
+    } catch (e: any) {
+      console.error(e);
+      return { error: e.messsage };
+    }
   }
 
   @Post("/login")
@@ -56,9 +76,7 @@ export default class ApplicationUserController extends EllipsiesController<Appli
     if (!body.userName) {
       throw new BadRequestError("Username is required");
     }
-    const agentUser = new QueryAgent<ApplicationUser>(ApplicationUser, {});
-    const user = await agentUser.findOneBy({ userName: body.userName });
-
+    const user = await ApplicationUser.findOneBy({ userName: body.userName });
     if (!user) {
       throw new BadRequestError("Invalid Username");
     }
@@ -80,15 +98,11 @@ export default class ApplicationUserController extends EllipsiesController<Appli
     if (!body.token || !body.user) {
       throw new BadRequestError("Invalid identity Provided");
     }
-    const agentUser = new QueryAgent<UserTokens>(UserTokens, {});
-    const found = await agentUser.findOneBy({ token: body.token });
+    const found = await UserTokens.findOneBy({ token: body.token });
     if (!found) {
       throw new BadRequestError("Invalid token Provided");
     }
-    const agentUpdate = new QueryAgent<UserTokens>(UserTokens, {
-      where: { id: found.id },
-    });
-    return agentUpdate.updateById({ user: body.user });
+    return UserTokens.update({ id: found.id }, { user: body.user });
   }
 
   @UseBefore(OTPAuthToken)

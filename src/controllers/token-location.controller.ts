@@ -5,11 +5,10 @@ import {
   ExpressRequest,
   InternalServerError,
   Param,
-  // populateType,
   Post,
-  QueryAgent,
   Req,
   UseBefore,
+  MoreThan,
 } from "@similie/ellipsies";
 import {
   LocationRisk,
@@ -35,16 +34,16 @@ export default class TokenController extends EllipsiesController<TokenLocation> 
     const pointApi = new PointApi();
     const risks = await pointApi.getAllRiskValues();
     for (const location of locations) {
-      const agent = new QueryAgent<LocationRisk>(LocationRisk, {
+      const value = await LocationRisk.find({
         where: {
           location: location.id,
           isActive: true,
-          createdAt: {
-            ">": new Date(new Date().getTime() - 1000 * 60 * 60 * 24 * 3),
-          } as unknown as Date,
+          createdAt: MoreThan(
+            new Date(new Date().getTime() - 1000 * 60 * 60 * 24 * 3),
+          ),
         },
       });
-      const value = (await agent.getObjects()) as LocationRisk[];
+
       const riskMap: Record<string, boolean> = {};
       const locationRiskIds: (Partial<RiskIndicator> & { onDate?: Date })[] =
         [];
@@ -72,24 +71,26 @@ export default class TokenController extends EllipsiesController<TokenLocation> 
     @Req() req: ExpressRequest,
   ): Promise<TokenLocation[]> {
     const token: string | undefined = req.query.token as string | undefined;
-
     if (!token) {
       return [];
     }
     try {
-      const agentToken = new QueryAgent<UserTokens>(UserTokens, {});
-      const found = await agentToken.findOneBy({ token });
+      const found = await UserTokens.findOne({
+        where: { token },
+        relations: { user: true },
+      });
+
       if (!found || !found.user) {
         return [];
       }
 
       const user = typeof found.user === "string" ? found.user : found.user.id;
-      const queryAgent = new QueryAgent<TokenLocation>(TokenLocation, {
-        populate: ["*"],
-        sort: { createdAt: "desc" },
+
+      const values = await TokenLocation.find({
+        order: { createdAt: "desc" },
         where: { user },
       });
-      const values = (await queryAgent.getObjects()) as TokenLocation[];
+
       return this.findAlerts(values) as unknown as TokenLocation[];
     } catch (e) {
       console.error("ERROR", e);

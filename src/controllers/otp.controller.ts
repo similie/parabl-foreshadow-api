@@ -4,7 +4,6 @@ import {
   EllipsiesController,
   EllipsiesExtends,
   Body,
-  QueryAgent,
   BadRequestError,
   Req,
   Post,
@@ -13,6 +12,7 @@ import {
   Param,
   ExpressRequest,
   IDValue,
+  In,
 } from "@similie/ellipsies";
 import { ApplicationUser, OTP, VerificationToken } from "../models";
 import {
@@ -32,7 +32,6 @@ export default class OTPController extends EllipsiesController<OTP> {
   }
 
   private async otpUser(identifier: string): Promise<ApplicationUser | null> {
-    const queryAgent = new QueryAgent<ApplicationUser>(ApplicationUser, {});
     const search: FindOptionsWhere<ApplicationUser> = {};
     if (isEmail(identifier)) {
       search.email = identifier;
@@ -40,25 +39,22 @@ export default class OTPController extends EllipsiesController<OTP> {
       search.phone = identifier;
     }
 
-    const user = await queryAgent.findOneBy(search);
+    const user = await ApplicationUser.findOneBy(search);
     return user || null;
   }
 
   private async findOtpByUsernameIdentifier(
     identifier: string,
-  ): Promise<QueryAgent<OTP>> {
+  ): Promise<FindOptionsWhere<OTP>> {
     if (isValueIdentity(identifier)) {
-      return new QueryAgent<OTP>(OTP, {
-        where: {
-          identifier,
-          active: true,
-          createdAt: createdAtSearch(),
-        },
-      });
+      return {
+        identifier,
+        active: true,
+        createdAt: createdAtSearch(),
+      };
     }
 
-    const queryAgent = new QueryAgent<ApplicationUser>(ApplicationUser, {});
-    const user = await queryAgent.findOneBy({ userName: identifier });
+    const user = await ApplicationUser.findOneBy({ userName: identifier });
     if (!user) {
       throw new Error("User is not found");
     }
@@ -75,13 +71,11 @@ export default class OTPController extends EllipsiesController<OTP> {
       throw new Error("User has not valid contact details");
     }
 
-    return new QueryAgent<OTP>(OTP, {
-      where: {
-        identifier: search as unknown as string,
-        active: true,
-        createdAt: createdAtSearch(),
-      },
-    });
+    return {
+      identifier: In(search),
+      active: true,
+      createdAt: createdAtSearch(),
+    };
   }
 
   private invalidateAllOtp(identifier: string) {
@@ -101,10 +95,8 @@ export default class OTPController extends EllipsiesController<OTP> {
     }
     let identifier = body.identifier;
     try {
-      const queryAgent = await this.findOtpByUsernameIdentifier(
-        body.identifier,
-      );
-      const verifications = (await queryAgent.getObjects()) as OTP[];
+      const where = await this.findOtpByUsernameIdentifier(body.identifier);
+      const verifications = await OTP.find({ where });
       let valid = false;
       for (const verify of verifications) {
         if (!verify || !verify.otp) {

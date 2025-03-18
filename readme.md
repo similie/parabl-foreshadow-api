@@ -19,6 +19,16 @@ Imagine if you could **see into the future**—well, at least when it comes to c
 
 Stay tuned for the full API documentation (coming soon™). Until then, keep an eye on the horizon, and let **Foreshadow** light the way! 🌞🌧️⚡
 
----
+### About Similie
 
-Built with ❤️ by **Similie** – Because tech should **empower, not overwhelm**.
+Similie is a technology company based out of Timor-Leste, dedicated to developing innovative solutions that support international development initiatives and climate-change adaption. Our mission is to harness the power of technology to drive positive change and improve lives around the world. With a focus on sustainability, community engagement, and social impact, we strive to create products and services that make a real difference in people's lives.
+
+### Contributors to Ellipsies
+
+We extend our heartfelt gratitude to the following individuals for their invaluable contributions to the development and success of Parabl Foreshadow
+
+If you would like to join this list and contribute to Ellipsies, please refer to our CONTRIBUTING.md guide for more information on how to get involved.
+
+Thank you for your continued support and contributions!
+
+Built with ❤️ by **Similie** in Timor-Leste – Tech should **empower, not overwhelm**.

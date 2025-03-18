@@ -7,7 +7,7 @@ import {
 } from "@similie/ellipsies";
 import * as models from "./models";
 import * as controllers from "./controllers";
-import { EllipsiesSocket } from "./sockets";
+import { EllipsiesSocket, SocketServer } from "./sockets";
 import { getRedisConfig } from "./config";
 import { seedContent } from "./seeds";
 import {
@@ -19,6 +19,7 @@ import {
 import { PointApi } from "./weather";
 import { UserRequired } from "./middleware";
 import { tileMappingRoute } from "./utils/routes";
+import { setUserInCache } from "./utils";
 
 const eConfig = () => {
   return {
@@ -36,13 +37,14 @@ const ds = () => {
     password: process.env.DB_PASSWORD || "wrdims",
     host: process.env.DB_HOST || "localhost",
     port: 5432,
+    synchronize: false,
   };
 };
 
 const setRoutes = (ellipsies: Ellipsies) => {
   ellipsies.server.app.get(
     tileMappingRoute(COMMON_API_SERVICE_ROUTES),
-    // [UserRequired], // need to fix this
+    [UserRequired], // need to fix this
     PointApi.proxTileServer,
   );
 };
@@ -52,17 +54,22 @@ const pruneJobs = async () => {
   for (const job of repeatableJobs) {
     await foreCastQueue.removeJobScheduler(job.key);
   }
-};
-
-const runNotificationTest = async () => {
-  const repeatableJobs = await prewarmCachingQueue.getJobSchedulers();
-  for (const job of repeatableJobs) {
+  const repeatableWarmingJobs = await prewarmCachingQueue.getJobSchedulers();
+  for (const job of repeatableWarmingJobs) {
     await prewarmCachingQueue.removeJobScheduler(job.key);
   }
+};
+
+const runSystemJobs = async () => {
   await prewarmCachingQueue.add(
     CACHING_PREWARMING_JOB,
-    {},
-    { repeat: { pattern: "0 */20 * * * *" } },
+    {}, //  "0 */30 * * * *"
+    { repeat: { pattern: "0 */15 * * * *" }, jobId: "prewarm-caching" },
+  );
+  await foreCastQueue.add(
+    FORECAST_QUEUE_JOB,
+    {}, // PointApi.POINT_CHECK_TIMER { pattern: "0 */1 * * * *" }
+    { repeat: PointApi.POINT_CHECK_TIMER, jobId: "forecast-queue" },
   );
 };
 
@@ -74,12 +81,15 @@ const run = async () => {
   await seedContent(["risks"], ellipsies.pgManager.datasource);
   await EllipsiesSocket(ellipsies, getRedisConfig());
   await pruneJobs();
-  await foreCastQueue.add(
-    FORECAST_QUEUE_JOB,
-    {},
-    { repeat: PointApi.POINT_CHECK_TIMER },
+
+  await runSystemJobs();
+
+  SocketServer.instance.subscribe(
+    "token",
+    async function ({ token, user }: { token: string; user: string }) {
+      await setUserInCache(token, user, this.id);
+    },
   );
-  await runNotificationTest();
 };
 
 run();

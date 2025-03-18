@@ -2,7 +2,6 @@
 import {
   EllipsiesController,
   EllipsiesExtends,
-  QueryAgent,
   Post,
   Body,
   Req,
@@ -20,13 +19,19 @@ export default class UserTokenController extends EllipsiesController<UserTokens>
     super(UserTokens);
   }
 
+  public static async searchToken(token: string): Promise<UserTokens | null> {
+    const found = await UserTokens.findOne({
+      where: { token },
+      relations: { user: true },
+    });
+    return found || null;
+  }
+
   public static async getToken(token: string): Promise<UserTokens> {
-    const agentToken = new QueryAgent<UserTokens>(UserTokens, {});
-    const found = await agentToken.findOneBy({ token });
+    const found = await UserTokenController.searchToken(token);
     if (!found) {
       throw new BadRequestError("Invalid token Provided");
     }
-
     return found;
   }
 
@@ -39,13 +44,46 @@ export default class UserTokenController extends EllipsiesController<UserTokens>
     return super.find(req);
   }
 
-  private destroyExistingTokens(userUid: UUID) {
-    const agentUserDest = new QueryAgent<UserTokens>(UserTokens, {
-      where: { user: userUid as unknown as ApplicationUser },
-    });
-    return agentUserDest.destroyAll();
+  private async destroyExistingOnUser(userUid: UUID) {
+    try {
+      return await UserTokens.delete({
+        user: { id: userUid } as unknown as ApplicationUser,
+      });
+    } catch (e: any) {
+      console.error("Error destroying user token", e.message);
+    }
+    return null;
   }
 
+  private async generateNewToken(token: string, user: UUID) {
+    const store: { token: string; user?: UUID } = {
+      token,
+    };
+    if (user) {
+      store.user = user;
+      await this.destroyExistingOnUser(user);
+    }
+    const createdToken = (await UserTokens.save(
+      UserTokens.create(store as any),
+    )) as UserTokens;
+    const sendToken = await UserTokens.findOne({
+      where: { id: createdToken.id },
+      relations: { user: true },
+    });
+    return sendToken;
+  }
+
+  private async applyUserToToken(token: UserTokens, bodyUser: UUID) {
+    const user = await ApplicationUser.findOne({
+      where: { id: bodyUser },
+    });
+    if (!user) {
+      return token;
+    }
+    await UserTokens.update({ id: token.id }, { user: user });
+    const sendToken = await UserTokenController.searchToken(token.token);
+    return sendToken;
+  }
   /**
    * @description Override defaults to validate query and get objects
    * @param {Partial<UserTokens>} body
@@ -55,34 +93,22 @@ export default class UserTokenController extends EllipsiesController<UserTokens>
   public async search(
     @Body() body: Partial<UserTokens>,
   ): Promise<UserTokens | UserTokens[] | null> {
+    if (!body.token) {
+      throw new BadRequestError("Invalid token Provided");
+    }
+
     try {
-      const agentUser = new QueryAgent<UserTokens>(UserTokens, {
-        populate: ["user"],
-      });
-      let token = await agentUser.findOneBy({ token: body.token });
+      let token = await UserTokenController.searchToken(body.token);
       if (!token) {
-        const store: { token: string; user?: UUID } = {
-          token: body.token || "",
-        };
-        if (body.user) {
-          store.user = body.user as unknown as UUID;
-          await this.destroyExistingTokens(body.user as unknown as UUID);
-        }
-        token = (await agentUser.create(store as any)) as UserTokens;
+        token = await this.generateNewToken(
+          body.token,
+          body.user as unknown as UUID,
+        );
       } else if (token && body.user) {
-        // await this.destroyExistingTokens(body.user as unknown as UUID);
-        const appUserAgent = new QueryAgent<UserTokens>(UserTokens, {});
-        const user = await appUserAgent.findOneById(body.user);
-        if (!user) {
-          return token;
-        }
-        const agentUserUpdate = new QueryAgent<UserTokens>(UserTokens, {
-          where: { id: token.id },
-        });
-        await agentUserUpdate.updateById({
-          user: user,
-        });
-        token = await agentUser.findOneBy({ token: body.token });
+        token = await this.applyUserToToken(
+          token,
+          body.user as unknown as UUID,
+        );
       }
       return token;
     } catch (e) {
