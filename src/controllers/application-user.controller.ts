@@ -11,6 +11,7 @@ import {
   QueryParam,
   ExpressRequest,
   FindOptionsWhere,
+  UUID,
 } from "@similie/ellipsies";
 
 import { ApplicationUser, OTP, UserAgreement, UserTokens } from "../models";
@@ -38,6 +39,29 @@ export default class ApplicationUserController extends EllipsiesController<Appli
   @Get("/license")
   public async getLicense() {
     return UserAgreement.findOne({ where: { active: true } });
+  }
+
+  @Post("/logout")
+  public async Logout(@Body() body: { token: string; user: UUID }) {
+    if (!body.user) {
+      return { error: "Invalid User Provided" };
+    }
+
+    try {
+      const found = await UserTokenController.searchToken(body.token);
+      if (!found) {
+        return { error: "Invalid Token Provided" };
+      }
+      if (found.user?.id !== body.user) {
+        return { error: "Invalid User Provided" };
+      }
+
+      await UserTokens.update({ token: body.token }, { user: null });
+      return { result: "ok" };
+    } catch (e: any) {
+      console.error(e);
+      return { error: e.messsage };
+    }
   }
 
   @Post("/login")

@@ -19,11 +19,16 @@ export default class UserTokenController extends EllipsiesController<UserTokens>
     super(UserTokens);
   }
 
-  public static async getToken(token: string): Promise<UserTokens> {
+  public static async searchToken(token: string): Promise<UserTokens | null> {
     const found = await UserTokens.findOne({
       where: { token },
-      relations: ["user"],
+      relations: { user: true },
     });
+    return found || null;
+  }
+
+  public static async getToken(token: string): Promise<UserTokens> {
+    const found = await UserTokenController.searchToken(token);
     if (!found) {
       throw new BadRequestError("Invalid token Provided");
     }
@@ -49,6 +54,36 @@ export default class UserTokenController extends EllipsiesController<UserTokens>
     }
     return null;
   }
+
+  private async generateNewToken(token: string, user: UUID) {
+    const store: { token: string; user?: UUID } = {
+      token,
+    };
+    if (user) {
+      store.user = user;
+      await this.destroyExistingOnUser(user);
+    }
+    const createdToken = (await UserTokens.save(
+      UserTokens.create(store as any),
+    )) as UserTokens;
+    const sendToken = await UserTokens.findOne({
+      where: { id: createdToken.id },
+      relations: { user: true },
+    });
+    return sendToken;
+  }
+
+  private async applyUserToToken(token: UserTokens, bodyUser: UUID) {
+    const user = await ApplicationUser.findOne({
+      where: { id: bodyUser },
+    });
+    if (!user) {
+      return token;
+    }
+    await UserTokens.update({ id: token.id }, { user: user });
+    const sendToken = await UserTokenController.searchToken(token.token);
+    return sendToken;
+  }
   /**
    * @description Override defaults to validate query and get objects
    * @param {Partial<UserTokens>} body
@@ -58,35 +93,22 @@ export default class UserTokenController extends EllipsiesController<UserTokens>
   public async search(
     @Body() body: Partial<UserTokens>,
   ): Promise<UserTokens | UserTokens[] | null> {
+    if (!body.token) {
+      throw new BadRequestError("Invalid token Provided");
+    }
+
     try {
-      let token = await UserTokens.findOne({
-        where: { token: body.token },
-        relations: ["user"],
-      });
+      let token = await UserTokenController.searchToken(body.token);
       if (!token) {
-        const store: { token: string; user?: UUID } = {
-          token: body.token || "",
-        };
-        if (body.user) {
-          store.user = body.user as unknown as UUID;
-          await this.destroyExistingOnUser(body.user as unknown as UUID);
-        }
-        token = (await UserTokens.save(
-          UserTokens.create(store as any),
-        )) as UserTokens;
+        token = await this.generateNewToken(
+          body.token,
+          body.user as unknown as UUID,
+        );
       } else if (token && body.user) {
-        // await this.destroyExistingTokens(body.user as unknown as UUID);
-        const user = await ApplicationUser.findOne({
-          where: { id: body.user as unknown as UUID },
-        });
-        if (!user) {
-          return token;
-        }
-        await UserTokens.update({ id: token.id }, { user: user });
-        token = await UserTokens.findOne({
-          where: { token: body.token },
-          relations: ["user"],
-        });
+        token = await this.applyUserToToken(
+          token,
+          body.user as unknown as UUID,
+        );
       }
       return token;
     } catch (e) {

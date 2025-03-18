@@ -16,5 +16,5 @@ export default class UserTokens extends EllipsiesBaseModelUUID {
   public socket?: string;
   @ManyToOne(() => ApplicationUser, { nullable: true })
   @JoinColumn({ name: "user" })
-  public user?: ApplicationUser;
+  public user?: ApplicationUser | null;
 }
