@@ -64,7 +64,7 @@ const runSystemJobs = async () => {
   await prewarmCachingQueue.add(
     CACHING_PREWARMING_JOB,
     {}, //  "0 */30 * * * *"
-    { repeat: { pattern: "0 */30 * * * *" }, jobId: "prewarm-caching" },
+    { repeat: { pattern: "0 */15 * * * *" }, jobId: "prewarm-caching" },
   );
   await foreCastQueue.add(
     FORECAST_QUEUE_JOB,
