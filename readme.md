@@ -17,6 +17,21 @@ Imagine if you could **see into the future**—well, at least when it comes to c
 
 **Foreshadow API** is what powers all these features! It processes climate data, runs risk calculations, and serves up beautifully mapped weather insights so that **farmers, fishers, and decision-makers** can stay one step ahead of Mother Nature.
 
+Parabl Foreshadow API does require and instance of our [Foreshadow API](https://github.com/similie/parabl-foreshadow)
+
+- 📱 **Parabl Foreshadow (Mobile App)**
+  - 🌐 **Parabl Foreshadow API**
+    - ☁️ **Foreshadow API (GFS Data Processing)**
+
+Explanation:
+	•	Parabl Foreshadow (Mobile App)
+User-facing mobile application leveraging forecast data.
+	•	Parabl Foreshadow API
+Intermediate backend service tailored specifically for mobile app functionality.
+	•	Foreshadow API
+Core API service processing NOAA’s GFS weather data into forecasts.
+
+
 Stay tuned for the full API documentation (coming soon™). Until then, keep an eye on the horizon, and let **Foreshadow** light the way! 🌞🌧️⚡
 
 ### About Similie
