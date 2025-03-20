@@ -327,7 +327,6 @@ export class PointApi {
   ): Promise<PointForecastDetails> {
     try {
       const values = await this.rawPointWeather(coords);
-
       const meta = await this.getWeatherMeta(coords);
       const results: PointForecastDetails = {
         values: values.filter((v) => v !== null),
