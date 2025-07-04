@@ -1,10 +1,12 @@
 /* eslint-disable object-curly-spacing */
 /* eslint-disable @typescript-eslint/no-explicit-any */
+import "dotenv/config";
 import {
   Ellipsies,
   COMMON_API_SERVICE_ROUTES,
   DEFAULT_SERVICE_PORT,
 } from "@similie/ellipsies";
+
 import * as models from "./models";
 import * as controllers from "./controllers";
 import { EllipsiesSocket, SocketServer } from "./sockets";
@@ -61,11 +63,11 @@ const pruneJobs = async () => {
 };
 
 const runSystemJobs = async () => {
-  await prewarmCachingQueue.add(
-    CACHING_PREWARMING_JOB,
-    {}, //  "0 */30 * * * *"
-    { repeat: { pattern: "0 */15 * * * *" }, jobId: "prewarm-caching" },
-  );
+  // await prewarmCachingQueue.add(
+  //   CACHING_PREWARMING_JOB,
+  //   {}, //  "0 */30 * * * *"
+  //   { repeat: { pattern: "0 */15 * * * *" }, jobId: "prewarm-caching" },
+  // );
   await foreCastQueue.add(
     FORECAST_QUEUE_JOB,
     {}, // PointApi.POINT_CHECK_TIMER { pattern: "0 */1 * * * *" }

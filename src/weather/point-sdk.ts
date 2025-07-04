@@ -189,7 +189,7 @@ export class PointApi {
       };
       for (const _forecast of forecast) {
         const forecast = _forecast.values[i];
-        if (!sendMeta.values) {
+        if (!sendMeta.values || !forecast) {
           continue;
         }
         sendMeta.values.push({
@@ -243,10 +243,12 @@ export class PointApi {
       lib
         .get(targetUrl.toString(), { agent }, (proxyRes) => {
           // Forward response headers and status
-          res.writeHead(proxyRes.statusCode || 200, proxyRes.headers);
+          res.writeHead(proxyRes.statusCode || 200, {
+            ...proxyRes.headers,
+            ...{ "x-powered-by": "4Shadow" },
+          });
           // Pipe response data back to the client.
           proxyRes.pipe(res);
-
           proxyRes.on("end", () => resolve());
           proxyRes.on("error", (err) => reject(err));
         })
@@ -276,6 +278,29 @@ export class PointApi {
     return JSON.stringify(request);
   }
 
+  private setCoordsForGet(coords: LocationCoordinates) {
+    return `lat=${coords.latitude}&lon=${coords.longitude}`;
+  }
+
+  public async raw5DayPointForecast(
+    coords: LocationCoordinates,
+  ): Promise<ForecastResponseDetails[]> {
+    const url =
+      process.env.FORESHADOW_API_URL +
+      "/forecast?" +
+      this.setCoordsForGet(coords);
+    const response = await fetch(url, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        "api-key": process.env.FORESHADOW_API_KEY || "",
+      },
+    });
+
+    const responseValues = (await response.json()) as ForecastResponseDetails[];
+    return responseValues;
+  }
+
   public async rawPointForecast(
     coords: LocationCoordinates,
     days: number = PointApi.DAYS_TO_READ,
@@ -285,11 +310,31 @@ export class PointApi {
     const response = await fetch(process.env.FORESHADOW_API_URL + "/forecast", {
       method: "POST",
       body: this.setupForecastParameters(coords, days, hours, startTime),
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "api-key": process.env.FORESHADOW_API_KEY || "",
+      },
     });
 
     const responseValues = (await response.json()) as ForecastResponseDetails[];
     return responseValues;
+  }
+
+  public async rawGetPointWeather(
+    coords: LocationCoordinates,
+  ): Promise<PointForecastValue[]> {
+    const response = await fetch(
+      process.env.FORESHADOW_API_URL + "/point?" + this.setCoordsForGet(coords),
+      {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          "api-key": process.env.FORESHADOW_API_KEY || "",
+        },
+      },
+    );
+    const values = (await response.json()) as PointForecastValue[];
+    return values;
   }
 
   public async rawPointWeather(
@@ -313,7 +358,7 @@ export class PointApi {
     coords: LocationCoordinates,
   ): Promise<PointForecastDetails[]> {
     try {
-      const responseValues = await this.rawPointForecast(coords);
+      const responseValues = await this.raw5DayPointForecast(coords);
       const details = await this.iterateValuesWithMeta(coords, responseValues);
       return this.raiseAlerts(details);
     } catch (e: any) {
@@ -326,8 +371,9 @@ export class PointApi {
     coords: LocationCoordinates,
   ): Promise<PointForecastDetails> {
     try {
-      const values = await this.rawPointWeather(coords);
+      const values = await this.rawGetPointWeather(coords);
       const meta = await this.getWeatherMeta(coords);
+      // console.log("WEATHER VALUES", meta, values);
       const results: PointForecastDetails = {
         values: values.filter((v) => v !== null),
         ...meta,
@@ -411,9 +457,9 @@ export class PointApi {
     y: number = 0,
   ) {
     const params = new URLSearchParams();
-    if (process.env.FORESHADOW_API_KEY) {
-      params.set("authorization", process.env.FORESHADOW_API_KEY);
-    }
+    // if (process.env.FORESHADOW_API_KEY) {
+    //   params.set("api-key", process.env.FORESHADOW_API_KEY);
+    // }
 
     const noKey = ["param_key", "model"];
     for (const key in param) {
@@ -433,10 +479,11 @@ export class PointApi {
       `/tiles/${param.model || "gfs"}/${
         param.param_key
       }/${hour}/${z}/${x}/${y}.png?${params.toString()}`;
-    console.log("WARMING MAP LAYER", url);
     const response = await fetch(url, {
       method: "GET",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "api-key": process.env.FORESHADOW_API_KEY || "",
+      },
     });
 
     const responseValues = (await response.buffer()) as any;

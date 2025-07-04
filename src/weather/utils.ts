@@ -27,7 +27,15 @@ export const getLocationName = async (coords: LocationCoordinates) => {
       return cachedValue;
     }
 
-    const response = await fetch(url);
+    const response = await fetch(url, {
+      method: "GET",
+      headers: {
+        // Identify your app and include a contact email per the policy:
+        "User-Agent":
+          "Similie4Shadow/1.0 (https://github.com/similie; info@similie.org)",
+        "Accept-Language": "en",
+      },
+    });
     if (!response.ok) {
       throw new Error("Failed to fetch location name");
     }

@@ -1,10 +1,10 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // import nodemailer from 'nodemailer';
-import { EmailTransport } from './transport';
+import { EmailTransport } from "./transport";
 
-import path from 'path';
-import ejs from 'ejs';
-import fs from 'fs';
+import path from "path";
+import ejs from "ejs";
+import fs from "fs";
 export type EmailTemplateContent = {
   data: Record<string, any>;
   templateName: string;
@@ -12,21 +12,21 @@ export type EmailTemplateContent = {
 export type EmailContent = { html: string; text: string };
 
 enum CommonSubject {
-  otp = 'Your One-Time Passcode',
+  otp = "Your One-Time Passcode",
 }
 
 export class EmailTemplate {
-  private static templatePath = path.join(__dirname, 'templates');
+  private static templatePath = path.join(__dirname, "templates");
   public static renderTemplate(
     templateName: string,
     data: Record<string, any>,
-    isHtml = true
+    isHtml = true,
   ): Promise<string> {
-    const extension = isHtml ? 'html.ejs' : 'text.ejs';
+    const extension = isHtml ? "html.ejs" : "text.ejs";
     const filePath = path.join(this.templatePath, templateName, extension);
     if (!fs.existsSync(filePath)) {
       throw new Error(
-        `Template ${templateName}.${extension} not found in ${this.templatePath}`
+        `Template ${templateName}.${extension} not found in ${this.templatePath}`,
       );
     }
 
@@ -48,7 +48,7 @@ export class EmailTemplate {
    */
   public static async render(
     templateName: string,
-    data: Record<string, any>
+    data: Record<string, any>,
   ): Promise<EmailContent> {
     const [html, text] = await Promise.all([
       this.renderTemplate(templateName, data),
@@ -60,15 +60,15 @@ export class EmailTemplate {
 
 export class SystemEmail {
   private static readonly FROM: string =
-    process.env.DEFAULT_EMAIL_ADDRESS || 'info@similie.org';
+    process.env.DEFAULT_EMAIL_ADDRESS || "info@4shadow.io";
 
   public static async send(to: string, template: EmailTemplateContent) {
     const subject =
       CommonSubject[template.templateName as keyof typeof CommonSubject] ||
-      'Your Parabl Request';
+      "Your Parabl Request";
     const content = await EmailTemplate.render(
       template.templateName,
-      template.data
+      template.data,
     );
     return this.sendMail(to, subject, content);
   }
@@ -90,6 +90,8 @@ export class SystemEmail {
         }
         resolve(data);
       });
+    }).catch((err) => {
+      console.error("Error sending email:", err);
     });
   }
 }

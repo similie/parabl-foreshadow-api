@@ -139,7 +139,7 @@ export const runJob = async () => {
       longitude: location.longitude,
     };
     try {
-      const forecast = await pointApi.rawPointForecast(coords, 4, 3);
+      const forecast = await pointApi.raw5DayPointForecast(coords);
       const risks = await pointApi.raiseExtremeAlerts(forecast, location);
       if (!risks.length || !location.user) {
         continue;

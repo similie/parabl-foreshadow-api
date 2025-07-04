@@ -1,26 +1,22 @@
 import nodemailer from "nodemailer";
-import * as aws from "@aws-sdk/client-ses";
+// import * as aws from "@aws-sdk/client-ses";
+import { SESv2Client, SendEmailCommand } from "@aws-sdk/client-sesv2";
 import { defaultProvider } from "@aws-sdk/credential-provider-node";
+
 export class EmailTransport {
   private static _instance: EmailTransport | null = null;
   private _transporter: nodemailer.Transporter;
-  private ses: aws.SES;
 
   private constructor() {
-    // Configure SESClient
-    const sesConfig: aws.SESClientConfig = {
-      apiVersion: "2010-12-01",
-      region: "us-east-1",
-      credentials: defaultProvider(),
-      // Credentials will be resolved from the default credential provider chain
-    };
-    this.ses = new aws.SES(sesConfig);
-    // Configure Nodemailer transporter
+    // 1) Initialize the SESv2 client with defaultProvider (which now sees your .env)
+    const sesClient = new SESv2Client({
+      region: process.env.AWS_REGION, // e.g. 'us-east-1'
+      credentials: defaultProvider(), // will pick up AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, etc.
+    });
+
+    // 2) Create the Nodemailer transport
     this._transporter = nodemailer.createTransport({
-      SES: {
-        ses: this.ses,
-        aws,
-      },
+      SES: { sesClient, SendEmailCommand },
     });
   }
 
