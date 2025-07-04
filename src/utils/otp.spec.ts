@@ -106,7 +106,6 @@ describe("OTP Code Generation", () => {
       body: JSON.stringify({ username: "testEmail" }),
     });
     expect(response.status).toBe(500);
-    // console.log('BOOMOP', response);
   });
 
   it("should not get blocked with the token header", async () => {

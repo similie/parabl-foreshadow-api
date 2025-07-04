@@ -134,7 +134,6 @@ export default class OTPController extends EllipsiesController<OTP> {
       throw new BadRequestError("Invalid identity Provided");
     }
     await this.invalidateAllOtp(body.identifier);
-    // console.log('BODY IS SO HOT IT HURTS', body);
     const created = (await super.create(body)) as OTP;
 
     try {

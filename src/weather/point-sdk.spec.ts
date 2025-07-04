@@ -126,8 +126,6 @@ describe("Pont forecast API", () => {
           if (data.progress) {
             return console.log("Forecast Progress", data.progress);
           }
-
-          console.log("I HAVE THIS DATA", data);
         });
       } catch (e) {
         console.log(e);

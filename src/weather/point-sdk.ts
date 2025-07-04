@@ -373,7 +373,6 @@ export class PointApi {
     try {
       const values = await this.rawGetPointWeather(coords);
       const meta = await this.getWeatherMeta(coords);
-      // console.log("WEATHER VALUES", meta, values);
       const results: PointForecastDetails = {
         values: values.filter((v) => v !== null),
         ...meta,
