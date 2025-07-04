@@ -1,7 +1,7 @@
 {
-  "name": "parabl-foreshadow",
+  "name": "parabl-4shadow-api",
   "version": "1.0.0",
-  "description": "API for managing foreshadow mobile app",
+  "description": "API for managing 4Shadow mobile app",
   "main": "dist/main.js",
   "scripts": {
     "test": "jest --runInBand",
