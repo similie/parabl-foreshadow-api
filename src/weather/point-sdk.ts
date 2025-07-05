@@ -234,6 +234,9 @@ export class PointApi {
       // Serialize query parameters and remove authorization if present.
       targetUrl.search = new URLSearchParams(req.query as any).toString();
       targetUrl.searchParams.delete("authorization");
+      if (process.env.FORESHADOW_API_KEY) {
+        targetUrl.searchParams.set("api-key", process.env.FORESHADOW_API_KEY);
+      }
       // Log target URL (remove or comment out in production)
       console.log("Requesting tile from:", targetUrl.toString());
       // Select the appropriate agent based on the protocol.
